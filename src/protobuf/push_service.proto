@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package server;
+
+message SilentPush {}
+
+message Localizeable {
+    string locKey = 1;
+    repeated string locArgs = 2;
+}
+
+message AlertingPush {
+    oneof alertBody {
+        Localizeable locAlertBody = 1;
+        string simpleAlertBody = 2;
+    }
+    oneof alertTitle {
+        Localizeable locAlertTitle = 3;
+        string simpleAlertTitle = 4;
+    }
+    string sound = 5;
+}
+
+message VoipPush {
+    int64 callId = 1;
+    int32 attemptIndex = 2;
+}
+
+message PushBody {
+    string collapseKey = 1;
+    int32 timeToLive = 2;
+    int32 seq = 3;
+    oneof body {
+        SilentPush silentPush = 4;
+        AlertingPush alertingPush = 5;
+        VoipPush voipPush = 6;
+    }
+}
+
+message DeviceIdList {
+    repeated string deviceIds = 1;
+}
+
+message Push {
+    map<string, DeviceIdList> destinations = 1;
+    PushBody body = 2;
+}
+
+message Response {
+    map<string, DeviceIdList> projectInvalidations = 1;
+}
+
+message PingRequest {}
+message PongResponse {}
+
+service Pushing {
+    rpc Ping(PingRequest) returns (PongResponse) {}
+    rpc PushStream(stream Push) returns (stream Response) {}
+}

@@ -1,0 +1,18 @@
+grpc-port: 8010
+http-port: 8011
+google:
+  - project-id: 1
+    key: A
+    retries: 10
+    workers: 3
+    sandbox: false
+apple:
+  - project-id: 100501
+    topic: im.dlg.dialog-ee
+    voip: false
+    sandbox: false
+    pem: /config/production.pem
+  - project-id: 100601
+    voip: true
+    sandbox: false
+    pem: /config/voip.pem
