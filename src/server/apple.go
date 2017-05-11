@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"crypto"
 	"strings"
+	"fmt"
 )
 
 var apnsIOHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "apns", Name: "apns_io", Help: "Time spent in interactions with APNS"})
@@ -80,13 +81,22 @@ func loadCertificate(filename string) (cert tls.Certificate, err error) {
 		if block.Type == "CERTIFICATE" {
 			cert.Certificate = append(cert.Certificate, block.Bytes)
 		}
-
 		if block.Type == "RSA PRIVATE KEY" {
 			cert.PrivateKey, err = decryptPemBlock(block)
 			if err != nil {
 				return
 			}
 		}
+		if block.Type == "PRIVATE KEY" {
+			cert.PrivateKey, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+			if err != nil {
+				return
+			}
+		}
+	}
+	if cert.PrivateKey == nil {
+		err = fmt.Errorf("Private key was not extracted from %s", filename)
+		return
 	}
 	return
 }
@@ -147,11 +157,10 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 	failsCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"apns", Subsystem: subsystemName, Name: "failed_tasks", Help: "Failed tasks"})
 	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"apns", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
 	prometheus.MustRegister(successCount, failsCount, pushesSent)
-	n := &apns.Notification{}
 	grpclog.Printf("Started APNS worker %s", workerName)
-	for {
-		task = <-d.getTasksChan()
+	for task = range d.getTasksChan() {
 		// TODO: avoid allocation here, reuse payload across requests
+		n := &apns.Notification{}
 		payload = d.getPayload(task)
 		if payload == nil {
 			continue
@@ -166,7 +175,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 			resp, err = client.Push(n)
 			afterIO := time.Now()
 			if err != nil {
-				grpclog.Printf("[%s] APNS send error: `%s`", workerName, err.Error())
+				grpclog.Printf("[%s] APNS send error: `%s` (was sending %#v)", workerName, err.Error(), n)
 				failsCount.Inc()
 				continue
 			} else {
@@ -194,7 +203,8 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 func (d APNSDeliveryProvider) shouldInvalidate(res string) bool {
 	return res == apns.ReasonBadDeviceToken ||
 	       res == apns.ReasonUnregistered ||
-	       res == apns.ReasonMissingDeviceToken
+	       res == apns.ReasonMissingDeviceToken ||
+	       res == apns.ReasonDeviceTokenNotForTopic
 }
 
 func (d APNSDeliveryProvider) getWorkersPool() workersPool {

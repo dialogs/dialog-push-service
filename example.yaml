@@ -1,18 +1,26 @@
 grpc-port: 8010
 http-port: 8011
 google:
-  - project-id: 1
-    key: A
+  - project-id: 251541100516
+    key: AIzaSyBQXIS3BpOxHG7CYzs4A7jgCjmpnP6TtZA
     retries: 10
-    workers: 3
     sandbox: false
 apple:
   - project-id: 100501
     topic: im.dlg.dialog-ee
     voip: false
     sandbox: false
-    pem: /config/production.pem
+    pem: /config/production-big.pem
   - project-id: 100601
     voip: true
     sandbox: false
-    pem: /config/voip.pem
+    pem: /config/production-big-voip.pem
+  - project-id: 100507
+    topic: im.dlg.dialog-ee
+    voip: false
+    sandbox: false
+    pem: /config/production-ee.pem
+  - project-id: 100607
+    voip: true
+    sandbox: false
+    pem: /config/production-ee-voip.pem

@@ -82,16 +82,16 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 	failsCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"google", Subsystem: subsystemName, Name: "failed_tasks", Help: "Failed tasks"})
 	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"google", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
 	prometheus.MustRegister(successCount, failsCount, pushesSent)
-	grpclog.Printf("Started FCM worker %s", workerName)
+	grpclog.Printf("Started FCM worker %s with key `%s`", workerName, d.config.Key)
 	for task = range d.getTasksChan() {
+		resetFcmMessage(msg)
 		populateFcmMessage(msg, task)
 		msg.RegistrationIDs = task.deviceIds
 		beforeIO := time.Now()
 		resp, err = client.SendWithRetry(msg, int(d.config.Retries))
 		afterIO := time.Now()
-		resetFcmMessage(msg)
 		if err != nil {
-			grpclog.Printf("[%s] FCM response error: `%s`", workerName, err.Error())
+			grpclog.Printf("[%s] FCM response error: `%s` (was sending %#v)", workerName, err.Error(), msg)
 			failsCount.Inc()
 			continue
 		} else {
