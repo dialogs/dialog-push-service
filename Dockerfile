@@ -12,6 +12,7 @@ RUN go get github.com/spf13/viper\
  && go get github.com/grpc-ecosystem/go-grpc-prometheus\
  && go get github.com/prometheus/client_golang/prometheus\
  && go get github.com/gogo/protobuf/proto\
+ && go get -u go.uber.org/zap\
  && go get github.com/gogo/protobuf/sortkeys
 
 COPY src /go/src

@@ -2,10 +2,10 @@ package server
 
 import (
 	"github.com/edganiukov/fcm"
-	"google.golang.org/grpc/grpclog"
 	"github.com/prometheus/client_golang/prometheus"
 	"time"
 	"strings"
+	"go.uber.org/zap"
 )
 
 var fcmIOHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "google", Name: "fcm_io", Help: "Time spent in interactions with FCM"})
@@ -13,6 +13,7 @@ var fcmIOHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace:
 type GoogleDeliveryProvider struct {
 	tasks  chan PushTask
 	config googleConfig
+	logger *zap.Logger
 }
 
 var ErrInvalidRegistration = fcm.ErrInvalidRegistration.Error()
@@ -26,15 +27,15 @@ func (d GoogleDeliveryProvider) shouldInvalidate(err string) bool {
 	return err == ErrInvalidRegistration || err == ErrNotRegistered
 }
 
-func populateFcmMessage(msg *fcm.Message, task PushTask) {
+func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTask) {
 	msg.RegistrationIDs = task.deviceIds
 	if voip := task.body.GetVoipPush(); voip != nil {
-		grpclog.Printf("VOIP pushes are not supported, sending silent push instead")
+		d.logger.Warn("VOIP pushes are not supported, sending silent push instead")
 		msg.Data["callId"] = voip.GetCallId()
 		msg.Data["attemptIndex"] = voip.GetAttemptIndex()
 	}
 	if alerting := task.body.GetAlertingPush(); alerting != nil {
-		grpclog.Print("Alerting pushes are not supported for FCM, sending silent push instead")
+		d.logger.Warn("Alerting pushes are not supported for FCM, sending silent push instead")
 	}
 	if collapseKey := task.body.GetCollapseKey(); len(collapseKey) > 0 {
 		msg.CollapseKey = collapseKey
@@ -67,14 +68,17 @@ func (d GoogleDeliveryProvider) getClient() (*fcm.Client, error) {
 	return client, err
 }
 
+//var stringsArrayMarshaller = zapcore.PrimitiveArrayEncoder()
+
 func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 	var err error
 	var task PushTask
 	msg := &fcm.Message{Data: make(map[string]interface{}), Priority: "high", DryRun: d.config.IsSandbox}
 	var resp *fcm.Response
 	client, err := d.getClient()
+	workerLogger := d.logger.With(zap.String("worker", workerName), zap.String("key", d.config.Key))
 	if err != nil {
-		grpclog.Printf("Error in spawning FCM worker %s: %s", workerName, err.Error())
+		workerLogger.Error("Error in spawning FCM worker", zap.Error(err))
 		return
 	}
 	subsystemName := strings.Replace(workerName, ".", "_", -1)
@@ -82,16 +86,16 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 	failsCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"google", Subsystem: subsystemName, Name: "failed_tasks", Help: "Failed tasks"})
 	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"google", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
 	prometheus.MustRegister(successCount, failsCount, pushesSent)
-	grpclog.Printf("Started FCM worker %s with key `%s`", workerName, d.config.Key)
+	workerLogger.Info("Started FCM worker")
 	for task = range d.getTasksChan() {
 		resetFcmMessage(msg)
-		populateFcmMessage(msg, task)
+		d.populateFcmMessage(msg, task)
 		msg.RegistrationIDs = task.deviceIds
 		beforeIO := time.Now()
 		resp, err = client.SendWithRetry(msg, int(d.config.Retries))
 		afterIO := time.Now()
 		if err != nil {
-			grpclog.Printf("[%s] FCM response error: `%s` (was sending %#v)", workerName, err.Error(), msg)
+			workerLogger.Error("FCM response error", zap.Error(err), zap.Any("message", msg))
 			failsCount.Inc()
 			continue
 		} else {
@@ -106,7 +110,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 					if d.shouldInvalidate(r.Error.Error()) {
 						failures = append(failures, task.deviceIds[k])
 					} else {
-						grpclog.Printf("[%s] FCM response error: `%s`", workerName, r.Error.Error())
+						workerLogger.Error("FCM response error", zap.String("regId", task.deviceIds[k]), zap.Error(err))
 					}
 				}
 			}
@@ -114,7 +118,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 				task.resp <- failures
 			}
 		} else {
-			grpclog.Printf("[%s] Sucessfully sent to %s", workerName, task.deviceIds)
+			workerLogger.Info("Sucessfully sent", zap.Strings("regIds", task.deviceIds))
 		}
 	}
 }
@@ -127,8 +131,8 @@ func (d GoogleDeliveryProvider) getWorkersPool() workersPool {
 	return d.config.workersPool
 }
 
-func (config googleConfig) newProvider() DeliveryProvider {
+func (config googleConfig) newProvider(logger *zap.Logger) DeliveryProvider {
 	tasks := make(chan PushTask)
-	provider := GoogleDeliveryProvider{tasks: tasks, config: config}
+	provider := GoogleDeliveryProvider{tasks: tasks, config: config, logger: logger}
 	return provider
 }

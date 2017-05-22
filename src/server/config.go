@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/viper"
 	"os"
 	"errors"
+	"go.uber.org/zap"
 )
 
 type workersPool struct {
@@ -35,7 +36,7 @@ type googleConfig struct {
 
 type providerConstructor interface {
 	getProjectID() string
-	newProvider() DeliveryProvider
+	newProvider(*zap.Logger) DeliveryProvider
 }
 
 func (g googleConfig) getProjectID() string {
@@ -69,6 +70,7 @@ func (a apnsConfig) checkConfig() (err error) {
 type serverConfig struct {
 	Google   []googleConfig
 	Apple    []apnsConfig
+	Logger   *zap.Logger
 	GrpcPort uint16 `mapstructure:"grpc-port"`
 	HTTPPort uint16 `mapstructure:"http-port"`
 }
@@ -84,14 +86,14 @@ func (c *serverConfig) getProviderConfigs() []providerConstructor {
 	return constructors
 }
 
-func newConfig() *serverConfig {
-	cfg := &serverConfig{}
+func newConfig(logger *zap.Logger) *serverConfig {
+	cfg := &serverConfig{Logger: logger}
 	cfg.Google = make([]googleConfig, 0)
 	cfg.Apple = make([]apnsConfig, 0)
 	return cfg
 }
 
-func loadConfig(filename string) (config *serverConfig, err error) {
+func loadConfig(filename string, logger *zap.Logger) (config *serverConfig, err error) {
 	var file *os.File
 	viper.SetConfigType("YAML")
 	if file, err = os.Open(filename); err != nil {
@@ -100,7 +102,7 @@ func loadConfig(filename string) (config *serverConfig, err error) {
 	if err = viper.ReadConfig(file); err != nil {
 		return
 	}
-	config = newConfig()
+	config = newConfig(logger)
 	if err = viper.Unmarshal(config); err != nil {
 		return
 	}

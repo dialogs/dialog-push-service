@@ -2,12 +2,13 @@ package server
 
 import (
 	"golang.org/x/net/context"
-	"google.golang.org/grpc/grpclog"
 	"io"
+	"go.uber.org/zap"
 )
 
 type PushingServerImpl struct {
 	providers map[string]DeliveryProvider
+	logger *zap.Logger
 }
 
 func workerOutputLoop(projectId string, rsp chan *Response, in chan []string) {
@@ -35,15 +36,15 @@ func (p PushingServerImpl) startStream(requests chan *Push, responses chan *Resp
 		for projectId, deviceList := range req.GetDestinations() {
 			deviceIds := deviceList.GetDeviceIds()
 			if len(deviceIds) == 0 {
-				grpclog.Print("Empty deviceIds")
+				p.logger.Info("Empty deviceIds")
 				continue
 			}
 			if len(deviceIds) >= 1000 {
-				grpclog.Print("DeviceIds array should contain at most 999 items")
+				p.logger.Warn("DeviceIds array should contain at most 999 items")
 				continue
 			}
 			if provider, exists := p.providers[projectId]; !exists {
-				grpclog.Printf("No provider found for project `%s`", projectId)
+				p.logger.Error("No provider found for projectId", zap.String("projectId", projectId))
 			} else {
 				provider.getTasksChan() <- PushTask{deviceIds: deviceIds, body: req.GetBody(), resp: resps[projectId]}
 			}
@@ -65,7 +66,7 @@ func streamOut(stream Pushing_PushStreamServer, responses chan *Response, errch 
 	}
 }
 
-func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan error) {
+func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan error, logger *zap.Logger) {
 	for {
 		request, err := stream.Recv()
 		if err != nil {
@@ -73,7 +74,7 @@ func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan e
 			return
 		}
 		if request == nil {
-			grpclog.Print("Empty push, skipping")
+			logger.Info("Empty push, skipping")
 			continue
 		}
 		requests <- request
@@ -81,7 +82,7 @@ func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan e
 }
 
 func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
-	grpclog.Printf("Starting stream")
+	p.logger.Info("Starting stream")
 	errch := make(chan error)
 	requests := make(chan *Push)
 	responses := make(chan *Response)
@@ -89,31 +90,34 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 		close(requests)
 		close(responses)
 		close(errch)
-		grpclog.Printf("Closing stream")
+		p.logger.Info("Closing stream")
 	}()
 	go p.startStream(requests, responses)
 	go streamOut(stream, responses, errch)
-	go streamIn(stream, requests, errch)
+	go streamIn(stream, requests, errch, p.logger)
 	err := <- errch
 	if err == nil || err == io.EOF {
-		grpclog.Print("Stream completed normally")
+		p.logger.Info("Stream completed normally")
 	} else {
-		grpclog.Printf("Stopping stream due to error: %s", err.Error())
+		p.logger.Error("Stopping stream due to error", zap.Error(err))
 	}
 	return err
 }
 
-func ensureProjectIdUniqueness(projectId string, providers map[string]DeliveryProvider) {
+func ensureProjectIdUniqueness(projectId string, providers map[string]DeliveryProvider) bool {
 	if _, exists := providers[projectId]; exists {
-		grpclog.Fatalf("Duplicate project id `%s`", projectId)
+		return false
 	}
+	return true
 }
 
 func newPushingServer(config *serverConfig) PushingServer {
-	p := PushingServerImpl{providers: make(map[string]DeliveryProvider)}
+	p := PushingServerImpl{providers: make(map[string]DeliveryProvider), logger: config.Logger}
 	for _, c := range config.getProviderConfigs() {
-		ensureProjectIdUniqueness(c.getProjectID(), p.providers)
-		provider := c.newProvider()
+		if !ensureProjectIdUniqueness(c.getProjectID(), p.providers) {
+			config.Logger.Fatal("Duplicate project id", zap.String("projectId", c.getProjectID()))
+		}
+		provider := c.newProvider(config.Logger)
 		spawnWorkers(provider)
 		p.providers[c.getProjectID()] = provider
 	}

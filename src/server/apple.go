@@ -6,7 +6,6 @@ import (
 	"encoding/pem"
 	apns "github.com/sideshow/apns2"
 	pl "github.com/sideshow/apns2/payload"
-	"google.golang.org/grpc/grpclog"
 	"io/ioutil"
 	"github.com/prometheus/client_golang/prometheus"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"crypto"
 	"strings"
 	"fmt"
+	"go.uber.org/zap"
 )
 
 var apnsIOHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "apns", Name: "apns_io", Help: "Time spent in interactions with APNS"})
@@ -22,6 +22,7 @@ type APNSDeliveryProvider struct {
 	tasks  chan PushTask
 	cert   tls.Certificate
 	config apnsConfig
+	logger *zap.Logger
 }
 
 func (d APNSDeliveryProvider) getWorkerName() string {
@@ -106,7 +107,7 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 	payload := pl.NewPayload()
 	if voip := task.body.GetVoipPush(); voip != nil {
 		if !d.config.IsVoip {
-			grpclog.Printf("Attempted voip-push using non-voip certificate")
+			d.logger.Warn("Attempted voip-push using non-voip certificate")
 			return nil
 		}
 		payload.Custom("callId", voip.GetCallId())
@@ -114,7 +115,7 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 	}
 	if alerting := task.body.GetAlertingPush(); alerting != nil {
 		if d.config.IsVoip {
-			grpclog.Print("Attempted non-voip using voip certificate")
+			d.logger.Warn("Attempted non-voip using voip certificate")
 			return nil
 		}
 		if locAlert := alerting.GetLocAlertTitle(); locAlert != nil {
@@ -133,7 +134,7 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 	}
 	if silent := task.body.GetSilentPush(); silent != nil {
 		if d.config.IsVoip {
-			grpclog.Print("Attempted non-voip using voip certificate")
+			d.logger.Warn("Attempted non-voip using voip certificate")
 			return nil
 		}
 		payload.ContentAvailable()
@@ -157,7 +158,8 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 	failsCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"apns", Subsystem: subsystemName, Name: "failed_tasks", Help: "Failed tasks"})
 	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"apns", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
 	prometheus.MustRegister(successCount, failsCount, pushesSent)
-	grpclog.Printf("Started APNS worker %s", workerName)
+	workerLogger := d.logger.With(zap.String("worker", workerName))
+	workerLogger.Info("Started APNS worker")
 	for task = range d.getTasksChan() {
 		// TODO: avoid allocation here, reuse payload across requests
 		n := &apns.Notification{}
@@ -175,7 +177,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 			resp, err = client.Push(n)
 			afterIO := time.Now()
 			if err != nil {
-				grpclog.Printf("[%s] APNS send error: `%s` (was sending %#v)", workerName, err.Error(), n)
+				workerLogger.Error("APNS send error", zap.Error(err), zap.Any("message", n))
 				failsCount.Inc()
 				continue
 			} else {
@@ -184,13 +186,13 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 			}
 			if !resp.Sent() {
 				if d.shouldInvalidate(resp.Reason) {
-					grpclog.Printf("[%s] Invalidating token `%s` because of `%s`", workerName, deviceID, resp.Reason)
+					workerLogger.Warn("Invalidating token because of APNS response", zap.String("deviceId", deviceID), zap.String("reason", resp.Reason))
 					failures = append(failures, deviceID)
 				} else {
-					grpclog.Printf("[%s] APNS send error: %s, code: %d", workerName, resp.Reason, resp.StatusCode)
+					workerLogger.Warn("APNS send error", zap.String("reason", resp.Reason), zap.Int("statusCode", resp.StatusCode))
 				}
 			} else {
-				grpclog.Printf("[%s] Sucessfully sent to %s", workerName, deviceID)
+				workerLogger.Info("Sucessfully sent", zap.String("deviceId", deviceID))
 			}
 		}
 		pushesSent.Add(float64(len(task.deviceIds)))
@@ -211,11 +213,11 @@ func (d APNSDeliveryProvider) getWorkersPool() workersPool {
 	return d.config.workersPool
 }
 
-func (config apnsConfig) newProvider() DeliveryProvider {
+func (config apnsConfig) newProvider(logger *zap.Logger) DeliveryProvider {
 	tasks := make(chan PushTask)
 	cert, err := loadCertificate(config.PemFile)
 	if err != nil {
-		grpclog.Fatalf("Cannot start APNS provider: %s", err.Error())
+		logger.Fatal("Cannot start APNS provider", zap.Error(err))
 	}
-	return APNSDeliveryProvider{tasks: tasks, cert: cert, config: config}
+	return APNSDeliveryProvider{tasks: tasks, cert: cert, config: config, logger: logger}
 }

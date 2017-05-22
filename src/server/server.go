@@ -12,6 +12,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"go.uber.org/zap"
 )
 
 var opts struct {
@@ -31,23 +32,28 @@ func (config *serverConfig) startGrpc() *grpc.Server {
 func StartServer() {
 	var config *serverConfig
 	var err error
-	if _, err = flags.ParseArgs(&opts, os.Args); err != nil {
-		grpclog.Fatalf("Failed to parse arguments: %s", err.Error())
+	logger, err := zap.NewProduction()
+	defer logger.Sync()
+	if err != nil {
+		grpclog.Fatalf("Error initializing ZAP logger", err)
 	}
-	if config, err = loadConfig(opts.ConfigLocation); err != nil {
-		grpclog.Fatalf("Failed to parse config: %s", err.Error())
+	if _, err = flags.ParseArgs(&opts, os.Args); err != nil {
+		logger.Fatal("Failed to parse arguments.", zap.Error(err))
+	}
+	if config, err = loadConfig(opts.ConfigLocation, logger); err != nil {
+		logger.Fatal("Failed to parse config.", zap.Error(err))
 	}
 	grpcServer := config.startGrpc()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.GrpcPort))
 	if err != nil {
-		grpclog.Fatalf("Failed to start gRPC server: %s", err.Error())
+		logger.Fatal("Failed to start gRPC server.", zap.Error(err))
 	}
 	prometheus.MustRegister(fcmIOHistogram, apnsIOHistogram)
 	http.Handle("/metrics", prometheus.Handler())
 	go func() {
-		grpclog.Printf("Started HTTP server at port %d", config.HTTPPort)
+		logger.Info("Started HTTP server.", zap.Uint16("port", config.HTTPPort))
 		panic(http.ListenAndServe(fmt.Sprintf(":%d", config.HTTPPort), nil))
 	}()
-	grpclog.Printf("Started gRPC server at port %d", config.GrpcPort)
+	logger.Info("Started gRPC server.", zap.Uint16("port", config.GrpcPort))
 	panic(grpcServer.Serve(lis))
 }
