@@ -7,16 +7,17 @@ import (
 	"github.com/mwitkow/go-grpc-middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/grpclog"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/grpclog"
 )
 
 var opts struct {
 	ConfigLocation string `short:"c" long:"config" description:"Config file location" required:"true"`
+	StupidUnusedArgs string `short:"g" long:"gelf" description:"Unusued"`
 }
 
 func (config *serverConfig) startGrpc() *grpc.Server {
@@ -29,17 +30,19 @@ func (config *serverConfig) startGrpc() *grpc.Server {
 	return grpcServer
 }
 
+
 func StartServer() {
 	var config *serverConfig
 	var err error
-	logger, err := zap.NewProduction()
-	defer logger.Sync()
-	if err != nil {
-		grpclog.Fatalf("Error initializing ZAP logger", err)
-	}
 	if _, err = flags.ParseArgs(&opts, os.Args); err != nil {
-		logger.Fatal("Failed to parse arguments.", zap.Error(err))
+		grpclog.Fatalf("Failed to parse arguments: #%v", err)
 	}
+	// TODO: make this configurable
+	logger, err := zap.NewProduction()
+	if err != nil {
+		grpclog.Fatalf("Failed to initializer logger: %#v", err)
+	}
+	defer logger.Sync()
 	if config, err = loadConfig(opts.ConfigLocation, logger); err != nil {
 		logger.Fatal("Failed to parse config.", zap.Error(err))
 	}

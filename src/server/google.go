@@ -94,8 +94,9 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 		beforeIO := time.Now()
 		resp, err = client.SendWithRetry(msg, int(d.config.Retries))
 		afterIO := time.Now()
+		deviceIdKey := zap.Strings("deviceId", task.deviceIds)
 		if err != nil {
-			workerLogger.Error("FCM response error", zap.Error(err), zap.Any("message", msg))
+			workerLogger.Error("FCM response error", zap.Error(err), zap.Any("message", msg), deviceIdKey)
 			failsCount.Inc()
 			continue
 		} else {
@@ -110,7 +111,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 					if d.shouldInvalidate(r.Error.Error()) {
 						failures = append(failures, task.deviceIds[k])
 					} else {
-						workerLogger.Error("FCM response error", zap.String("regId", task.deviceIds[k]), zap.Error(err))
+						workerLogger.Error("FCM response error", zap.String("deviceId", task.deviceIds[k]), zap.Error(err))
 					}
 				}
 			}
@@ -118,7 +119,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 				task.resp <- failures
 			}
 		} else {
-			workerLogger.Info("Sucessfully sent", zap.Strings("regIds", task.deviceIds))
+			workerLogger.Info("Sucessfully sent", deviceIdKey, zap.Any("body", task.body))
 		}
 	}
 }

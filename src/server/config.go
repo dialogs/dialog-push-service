@@ -21,6 +21,7 @@ type apnsConfig struct {
 	PemFile     string `mapstructure:"pem"`
 	IsVoip      bool   `mapstructure:"voip"`
 	host        string
+	AllowAlerts bool   `mapstructure:"allow-alerts"`
 	sandboxing  `mapstructure:",squash"`
 	workersPool `mapstructure:",squash"`
 }

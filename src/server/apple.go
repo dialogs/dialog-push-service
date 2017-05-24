@@ -118,19 +118,27 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 			d.logger.Warn("Attempted non-voip using voip certificate")
 			return nil
 		}
-		if locAlert := alerting.GetLocAlertTitle(); locAlert != nil {
-			payload.AlertTitleLocKey(locAlert.GetLocKey())
-			payload.AlertTitleLocArgs(locAlert.GetLocArgs())
-		} else if simpleTitle := alerting.GetSimpleAlertTitle(); len(simpleTitle) > 0 {
-			payload.AlertTitle(simpleTitle)
+		if d.config.AllowAlerts {
+			if locAlert := alerting.GetLocAlertTitle(); locAlert != nil {
+				payload.AlertTitleLocKey(locAlert.GetLocKey())
+				payload.AlertTitleLocArgs(locAlert.GetLocArgs())
+			} else if simpleTitle := alerting.GetSimpleAlertTitle(); len(simpleTitle) > 0 {
+				payload.AlertTitle(simpleTitle)
+			}
+			if locBody := alerting.GetLocAlertBody(); locBody != nil {
+				payload.AlertLocKey(locBody.GetLocKey())
+				payload.AlertLocArgs(locBody.GetLocArgs())
+			} else if simpleBody := alerting.GetSimpleAlertBody(); len(simpleBody) > 0 {
+				payload.AlertBody(simpleBody)
+			}
+			if len(alerting.Sound) > 0 {
+				payload.Sound(alerting.Sound)
+			}
+		} else {
+			d.logger.Info("Alerting push is disallowed, sending silent instead")
+			payload.ContentAvailable()
+			payload.Sound("")
 		}
-		if locBody := alerting.GetLocAlertBody(); locBody != nil {
-			payload.AlertLocKey(locBody.GetLocKey())
-			payload.AlertLocArgs(locBody.GetLocArgs())
-		} else if simpleBody := alerting.GetSimpleAlertBody(); len(simpleBody) > 0 {
-			payload.AlertBody(simpleBody)
-		}
-		payload.Sound(alerting.Sound)
 	}
 	if silent := task.body.GetSilentPush(); silent != nil {
 		if d.config.IsVoip {
@@ -146,6 +154,14 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 	return payload
 }
 
+func (d APNSDeliveryProvider) getPushStatus() string {
+	if d.config.AllowAlerts {
+		return "alerts allowed"
+	} else {
+		return "silent-only"
+	}
+}
+
 func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 	var err error
 	var resp *apns.Response
@@ -159,7 +175,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"apns", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
 	prometheus.MustRegister(successCount, failsCount, pushesSent)
 	workerLogger := d.logger.With(zap.String("worker", workerName))
-	workerLogger.Info("Started APNS worker")
+	workerLogger.Info(fmt.Sprintf("Started APNS worker (%s).", d.getPushStatus()))
 	for task = range d.getTasksChan() {
 		// TODO: avoid allocation here, reuse payload across requests
 		n := &apns.Notification{}
@@ -172,12 +188,15 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 		n.Payload = payload
 		failures := make([]string, 0, len(task.deviceIds))
 		for _, deviceID := range task.deviceIds {
+			jmsg, _ := n.MarshalJSON()
+			workerLogger.Info("Sending push.", zap.String("message", string(jmsg)), zap.String("deviceId", deviceID))
 			n.DeviceToken = deviceID
 			beforeIO := time.Now()
 			resp, err = client.Push(n)
 			afterIO := time.Now()
+			deviceIdKey := zap.String("deviceId", deviceID)
 			if err != nil {
-				workerLogger.Error("APNS send error", zap.Error(err), zap.Any("message", n))
+				workerLogger.Error("APNS send error", zap.Error(err), zap.Any("message", n), deviceIdKey)
 				failsCount.Inc()
 				continue
 			} else {
@@ -186,13 +205,13 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 			}
 			if !resp.Sent() {
 				if d.shouldInvalidate(resp.Reason) {
-					workerLogger.Warn("Invalidating token because of APNS response", zap.String("deviceId", deviceID), zap.String("reason", resp.Reason))
+					workerLogger.Warn("Invalidating token because of APNS response", deviceIdKey, zap.String("reason", resp.Reason))
 					failures = append(failures, deviceID)
 				} else {
-					workerLogger.Warn("APNS send error", zap.String("reason", resp.Reason), zap.Int("statusCode", resp.StatusCode))
+					workerLogger.Warn("APNS send error", zap.String("reason", resp.Reason), zap.Int("statusCode", resp.StatusCode), deviceIdKey)
 				}
 			} else {
-				workerLogger.Info("Sucessfully sent", zap.String("deviceId", deviceID))
+				workerLogger.Info("Sucessfully sent", deviceIdKey, zap.Any("body", task.body))
 			}
 		}
 		pushesSent.Add(float64(len(task.deviceIds)))

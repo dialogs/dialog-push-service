@@ -4,6 +4,7 @@ import (
 	"golang.org/x/net/context"
 	"io"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type PushingServerImpl struct {
@@ -21,6 +22,7 @@ func workerOutputLoop(projectId string, rsp chan *Response, in chan []string) {
 
 func (p PushingServerImpl) startStream(requests chan *Push, responses chan *Response) {
 	resps := make(map[string]chan []string, len(p.providers))
+	projectIdToKeys := make(map[string]zapcore.Field, len(p.providers))
 	defer func() {
 		for _, ch := range resps {
 			close(ch)
@@ -28,6 +30,7 @@ func (p PushingServerImpl) startStream(requests chan *Push, responses chan *Resp
 	}()
 	for projectId := range p.providers {
 		out := make(chan []string)
+		projectIdToKeys[projectId] = zap.String("projectId", projectId)
 		resps[projectId] = out
 		// TODO: make timed output with aggregated results? [groupedWithin]
 		go workerOutputLoop(projectId, responses, out)
@@ -36,16 +39,17 @@ func (p PushingServerImpl) startStream(requests chan *Push, responses chan *Resp
 		for projectId, deviceList := range req.GetDestinations() {
 			deviceIds := deviceList.GetDeviceIds()
 			if len(deviceIds) == 0 {
-				p.logger.Info("Empty deviceIds")
+				p.logger.Info("Empty deviceIds", projectIdToKeys[projectId])
 				continue
 			}
 			if len(deviceIds) >= 1000 {
-				p.logger.Warn("DeviceIds array should contain at most 999 items")
+				p.logger.Warn("DeviceIds array should contain at most 999 items", projectIdToKeys[projectId])
 				continue
 			}
 			if provider, exists := p.providers[projectId]; !exists {
-				p.logger.Error("No provider found for projectId", zap.String("projectId", projectId))
+				p.logger.Error("No provider found for projectId", projectIdToKeys[projectId])
 			} else {
+				p.logger.Info("GRPC Request", projectIdToKeys[projectId], zap.Any("body", req.GetBody()), zap.Strings("deviceIds", deviceIds))
 				provider.getTasksChan() <- PushTask{deviceIds: deviceIds, body: req.GetBody(), resp: resps[projectId]}
 			}
 		}
