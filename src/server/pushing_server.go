@@ -38,6 +38,11 @@ func (p PushingServerImpl) startStream(requests chan *Push, responses chan *Resp
 	for req := range requests {
 		for projectId, deviceList := range req.GetDestinations() {
 			deviceIds := deviceList.GetDeviceIds()
+			provider, exists := p.providers[projectId]
+			if !exists {
+				p.logger.Error("No provider found for projectId", zap.String("unknownProjectId", projectId))
+				continue
+			}
 			if len(deviceIds) == 0 {
 				p.logger.Info("Empty deviceIds", projectIdToKeys[projectId])
 				continue
@@ -46,12 +51,8 @@ func (p PushingServerImpl) startStream(requests chan *Push, responses chan *Resp
 				p.logger.Warn("DeviceIds array should contain at most 999 items", projectIdToKeys[projectId])
 				continue
 			}
-			if provider, exists := p.providers[projectId]; !exists {
-				p.logger.Error("No provider found for projectId", projectIdToKeys[projectId])
-			} else {
-				p.logger.Info("GRPC Request", projectIdToKeys[projectId], zap.Any("body", req.GetBody()), zap.Strings("deviceIds", deviceIds))
-				provider.getTasksChan() <- PushTask{deviceIds: deviceIds, body: req.GetBody(), resp: resps[projectId]}
-			}
+			p.logger.Info("GRPC Request", projectIdToKeys[projectId], zap.Any("body", req.GetBody()), zap.Strings("deviceIds", deviceIds))
+			provider.getTasksChan() <- PushTask{deviceIds: deviceIds, body: req.GetBody(), resp: resps[projectId]}
 		}
 	}
 }
