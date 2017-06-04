@@ -27,7 +27,7 @@ message AlertingPush {
 }
 
 message VoipPush {
-    int64 callId = 1;
+    int64 call_id = 1;
     int32 attempt_index = 2;
 }
 
