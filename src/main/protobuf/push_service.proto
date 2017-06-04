@@ -10,40 +10,40 @@ package_name: "im.dlg.push.service";
 message SilentPush {}
 
 message Localizeable {
-    string locKey = 1;
-    repeated string locArgs = 2;
+    string loc_key = 1;
+    repeated string loc_args = 2;
 }
 
 message AlertingPush {
-    oneof alertBody {
-        Localizeable locAlertBody = 1;
-        string simpleAlertBody = 2;
+    oneof alert_body {
+        Localizeable loc_alert_body = 1;
+        string simple_alert_body = 2;
     }
     oneof alertTitle {
-        Localizeable locAlertTitle = 3;
-        string simpleAlertTitle = 4;
+        Localizeable loc_alert_title = 3;
+        string simple_alert_title = 4;
     }
     string sound = 5;
 }
 
 message VoipPush {
     int64 callId = 1;
-    int32 attemptIndex = 2;
+    int32 attempt_index = 2;
 }
 
 message PushBody {
-    string collapseKey = 1;
-    int32 timeToLive = 2;
+    string collapse_key = 1;
+    int32 time_to_live = 2;
     int32 seq = 3;
     oneof body {
-        SilentPush silentPush = 4;
-        AlertingPush alertingPush = 5;
-        VoipPush voipPush = 6;
+        SilentPush silent_push = 4;
+        AlertingPush alerting_push = 5;
+        VoipPush voip_push = 6;
     }
 }
 
 message DeviceIdList {
-    repeated string deviceIds = 1;
+    repeated string device_ids = 1;
 }
 
 message Push {
@@ -52,7 +52,7 @@ message Push {
 }
 
 message Response {
-    map<string, DeviceIdList> projectInvalidations = 1;
+    map<string, DeviceIdList> project_invalidations = 1;
 }
 
 message PingRequest {}
