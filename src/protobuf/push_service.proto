@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package server;
+package main;
 
 message SilentPush {}
 
@@ -35,6 +35,12 @@ message PushBody {
         AlertingPush alerting_push = 5;
         VoipPush voip_push = 6;
     }
+    PrivatePayload private_payload = 7;
+}
+
+message PrivatePayload {
+    bytes public_key = 1;
+    bytes body = 2;
 }
 
 message DeviceIdList {
