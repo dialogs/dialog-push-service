@@ -14,7 +14,7 @@ message AlertingPush {
         Localizeable loc_alert_body = 1;
         string simple_alert_body = 2;
     }
-    oneof alertTitle {
+    oneof alert_title {
         Localizeable loc_alert_title = 3;
         string simple_alert_title = 4;
     }
