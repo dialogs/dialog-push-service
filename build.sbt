@@ -5,9 +5,9 @@ organization := "im.dlg"
 
 name := "dialog-push-service"
 
-version := "0.0.3"
+version := "0.0.4.1"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.11"
 
 libraryDependencies ++= Seq(
   "io.grpc" % "grpc-netty" % "1.2.0",
@@ -19,7 +19,8 @@ PB.targets in Compile := Seq(
   scalapb.gen(singleLineToString = true) → (sourceManaged in Compile).value
 )
 
-licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
+licenses += ("Apache-2.0", url(
+  "https://www.apache.org/licenses/LICENSE-2.0.html"))
 
 publishMavenStyle := true
 

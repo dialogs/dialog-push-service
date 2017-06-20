@@ -3,7 +3,7 @@
 mkdir -p src/main/protobuf
 cp -f src/protobuf/*.proto src/main/protobuf
 
-grep -rl 'package server' src/main/protobuf | xargs sed -i.backup '/package server/a\
+grep -rl 'package main' src/main/protobuf | xargs sed -i.backup '/package main/a\
 \
 import "scalapb/scalapb.proto";\
 option (scalapb.options) = {\

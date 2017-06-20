@@ -1,15 +1,16 @@
 package main
 
 import (
-	"golang.org/x/net/context"
 	"io"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/net/context"
 )
 
 type PushingServerImpl struct {
 	providers map[string]DeliveryProvider
-	logger *zap.Logger
+	logger    *zap.Logger
 }
 
 func workerOutputLoop(projectId string, rsp chan *Response, in chan []string) {
@@ -100,7 +101,7 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	go p.startStream(requests, responses)
 	go streamOut(stream, responses, errch)
 	go streamIn(stream, requests, errch, p.logger)
-	err := <- errch
+	err := <-errch
 	if err == nil || err == io.EOF {
 		p.logger.Info("Stream completed normally")
 	} else {
@@ -110,10 +111,8 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 }
 
 func ensureProjectIdUniqueness(projectId string, providers map[string]DeliveryProvider) bool {
-	if _, exists := providers[projectId]; exists {
-		return false
-	}
-	return true
+	_, exists := providers[projectId]
+	return !exists
 }
 
 func newPushingServer(config *serverConfig) PushingServer {

@@ -25,6 +25,11 @@ type APNSDeliveryProvider struct {
 	logger *zap.Logger
 }
 
+type EncryptedPushUserInfo struct {
+	encryptedData []byte
+	nonce int64
+}
+
 func (d APNSDeliveryProvider) getWorkerName() string {
 	return d.config.ProjectID
 }
@@ -102,6 +107,25 @@ func loadCertificate(filename string) (cert tls.Certificate, err error) {
 	return
 }
 
+func fromAlerting(payload *pl.Payload, alerting *AlertingPush) *pl.Payload {
+	if locAlert := alerting.GetLocAlertTitle(); locAlert != nil {
+		payload.AlertTitleLocKey(locAlert.GetLocKey())
+		payload.AlertTitleLocArgs(locAlert.GetLocArgs())
+	} else if simpleTitle := alerting.GetSimpleAlertTitle(); len(simpleTitle) > 0 {
+		payload.AlertTitle(simpleTitle)
+	}
+	if locBody := alerting.GetLocAlertBody(); locBody != nil {
+		payload.AlertLocKey(locBody.GetLocKey())
+		payload.AlertLocArgs(locBody.GetLocArgs())
+	} else if simpleBody := alerting.GetSimpleAlertBody(); len(simpleBody) > 0 {
+		payload.AlertBody(simpleBody)
+	}
+	if len(alerting.Sound) > 0 {
+		payload.Sound(alerting.Sound)
+	}
+	return payload
+}
+
 func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 	// TODO: sync.Pool this?
 	payload := pl.NewPayload()
@@ -118,27 +142,20 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 			d.logger.Warn("Attempted non-voip using voip certificate")
 			return nil
 		}
-		if d.config.AllowAlerts {
-			if locAlert := alerting.GetLocAlertTitle(); locAlert != nil {
-				payload.AlertTitleLocKey(locAlert.GetLocKey())
-				payload.AlertTitleLocArgs(locAlert.GetLocArgs())
-			} else if simpleTitle := alerting.GetSimpleAlertTitle(); len(simpleTitle) > 0 {
-				payload.AlertTitle(simpleTitle)
-			}
-			if locBody := alerting.GetLocAlertBody(); locBody != nil {
-				payload.AlertLocKey(locBody.GetLocKey())
-				payload.AlertLocArgs(locBody.GetLocArgs())
-			} else if simpleBody := alerting.GetSimpleAlertBody(); len(simpleBody) > 0 {
-				payload.AlertBody(simpleBody)
-			}
-			if len(alerting.Sound) > 0 {
-				payload.Sound(alerting.Sound)
-			}
-		} else {
-			d.logger.Info("Alerting push is disallowed, sending silent instead")
-			payload.ContentAvailable()
-			payload.Sound("")
+		payload = fromAlerting(payload, alerting)
+	}
+	if encryped := task.body.GetEncryptedPush(); encryped != nil {
+		if public := encryped.GetPublicAlertingPush(); public != nil {
+			payload = fromAlerting(payload, public)
 		}
+		userInfo := EncryptedPushUserInfo{nonce: encryped.Nonce}
+		if data := encryped.GetEncryptedData(); data != nil && len(data) > 0 {
+			userInfo.encryptedData = data
+		} else {
+			d.logger.Warn("Encrypted push without encrypted data, ignoring")
+			return nil
+		}
+		payload.Custom("user_info", userInfo)
 	}
 	if silent := task.body.GetSilentPush(); silent != nil {
 		if d.config.IsVoip {

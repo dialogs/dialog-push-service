@@ -5,6 +5,10 @@ google:
     key: AIzaSyBQXIS3BpOxHG7CYzs4A7jgCjmpnP6TtZA
     retries: 10
     sandbox: false
+  - project-id: 123456
+    key: jiasjdfia92340kasd0f
+    retries: 10
+    sandbox: false
 apple:
   - project-id: 100501
     topic: im.dlg.dialog-ee

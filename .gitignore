@@ -2,4 +2,5 @@ pkg
 .idea
 *.iml
 *.pem
+.glide
 target/
