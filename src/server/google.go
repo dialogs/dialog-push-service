@@ -6,6 +6,7 @@ import (
 	"time"
 	"strings"
 	"go.uber.org/zap"
+	"strconv"
 )
 
 var fcmIOHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "google", Name: "fcm_io", Help: "Time spent in interactions with FCM"})
@@ -27,6 +28,15 @@ func (d GoogleDeliveryProvider) shouldInvalidate(err string) bool {
 	return err == ErrInvalidRegistration || err == ErrNotRegistered
 }
 
+func fcmFromAlerting(n *fcm.Notification, alerting *AlertingPush) *fcm.Notification {
+	n.Title = alerting.GetSimpleAlertTitle()
+	n.Body = alerting.GetSimpleAlertBody()
+	if badge := alerting.GetBadge(); badge > 0 {
+		n.Badge = strconv.Itoa(int(badge))
+	}
+	return n
+}
+
 func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTask) {
 	msg.RegistrationIDs = task.deviceIds
 	if voip := task.body.GetVoipPush(); voip != nil {
@@ -35,7 +45,11 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 		msg.Data["attemptIndex"] = voip.GetAttemptIndex()
 	}
 	if alerting := task.body.GetAlertingPush(); alerting != nil {
-		d.logger.Warn("Alerting pushes are not supported for FCM, sending silent push instead")
+		if !d.config.AllowAlerts {
+			d.logger.Warn("Alerting pushes are not supported for FCM, sending silent push instead")
+		} else {
+			msg.Notification = fcmFromAlerting(msg.Notification, alerting)
+		}
 	}
 	if collapseKey := task.body.GetCollapseKey(); len(collapseKey) > 0 {
 		msg.CollapseKey = collapseKey
@@ -52,23 +66,16 @@ func resetFcmMessage(msg *fcm.Message) {
 	for k := range msg.Data {
 		delete(msg.Data, k)
 	}
+	msg.Notification = &fcm.Notification{}
 	msg.RegistrationIDs = msg.RegistrationIDs[:0]
 	msg.CollapseKey = ""
 	msg.TimeToLive = 0
 }
 
 func (d GoogleDeliveryProvider) getClient() (*fcm.Client, error) {
-	var endpoint string
-	if len(d.config.host) > 0 {
-		endpoint = d.config.host
-	} else {
-		endpoint = fcm.DefaultEndpoint
-	}
-	client, err := fcm.NewClient(d.config.Key, fcm.WithEndpoint(endpoint))
+	client, err := fcm.NewClient(d.config.Key, fcm.WithEndpoint(fcm.DefaultEndpoint))
 	return client, err
 }
-
-//var stringsArrayMarshaller = zapcore.PrimitiveArrayEncoder()
 
 func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 	var err error
@@ -91,12 +98,13 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 		resetFcmMessage(msg)
 		d.populateFcmMessage(msg, task)
 		msg.RegistrationIDs = task.deviceIds
+		workerLogger.Info("Sending push", zap.Strings("deviceId", msg.RegistrationIDs))
 		beforeIO := time.Now()
 		resp, err = client.SendWithRetry(msg, int(d.config.Retries))
 		afterIO := time.Now()
 		deviceIdKey := zap.Strings("deviceId", task.deviceIds)
 		if err != nil {
-			workerLogger.Error("FCM response error", zap.Error(err), zap.Any("message", msg), deviceIdKey)
+			workerLogger.Error("FCM response error", zap.Error(err), deviceIdKey)
 			failsCount.Inc()
 			continue
 		} else {
@@ -119,7 +127,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 				task.resp <- failures
 			}
 		} else {
-			workerLogger.Info("Sucessfully sent", deviceIdKey, zap.Any("body", task.body))
+			workerLogger.Info("Sucessfully sent", deviceIdKey)
 		}
 	}
 }

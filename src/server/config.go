@@ -20,7 +20,6 @@ type apnsConfig struct {
 	Topic       string
 	PemFile     string `mapstructure:"pem"`
 	IsVoip      bool   `mapstructure:"voip"`
-	host        string
 	AllowAlerts bool   `mapstructure:"allow-alerts"`
 	sandboxing  `mapstructure:",squash"`
 	workersPool `mapstructure:",squash"`
@@ -30,7 +29,7 @@ type googleConfig struct {
 	ProjectID   string `mapstructure:"project-id"`
 	Key         string
 	Retries     uint8
-	host        string
+	AllowAlerts bool   `mapstructure:"allow-alerts"`
 	sandboxing  `mapstructure:",squash"`
 	workersPool `mapstructure:",squash"`
 }

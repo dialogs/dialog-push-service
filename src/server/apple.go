@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"github.com/prometheus/client_golang/prometheus"
 	"time"
-	"net/http"
 	"crypto"
 	"strings"
 	"fmt"
@@ -37,11 +36,6 @@ func (d APNSDeliveryProvider) getWorkerName() string {
 func (d APNSDeliveryProvider) getClient() *apns.Client {
 	client := apns.NewClient(d.cert)
 	switch {
-	case len(d.config.host) > 0:
-		client.HTTPClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		client.Host = d.config.host
 	case d.config.IsSandbox:
 		client.Development()
 	default:
@@ -107,7 +101,7 @@ func loadCertificate(filename string) (cert tls.Certificate, err error) {
 	return
 }
 
-func fromAlerting(payload *pl.Payload, alerting *AlertingPush) *pl.Payload {
+func apnsFromAlerting(payload *pl.Payload, alerting *AlertingPush) *pl.Payload {
 	if locAlert := alerting.GetLocAlertTitle(); locAlert != nil {
 		payload.AlertTitleLocKey(locAlert.GetLocKey())
 		payload.AlertTitleLocArgs(locAlert.GetLocArgs())
@@ -142,11 +136,18 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 			d.logger.Warn("Attempted non-voip using voip certificate")
 			return nil
 		}
-		payload = fromAlerting(payload, alerting)
+		if !d.config.AllowAlerts {
+			d.logger.Warn("Alerting pushes are disabled, sending silent instead")
+			payload.Badge(int(alerting.GetBadge()))
+			payload.ContentAvailable()
+			payload.Sound("")
+		} else {
+			payload = apnsFromAlerting(payload, alerting)
+		}
 	}
 	if encryped := task.body.GetEncryptedPush(); encryped != nil {
 		if public := encryped.GetPublicAlertingPush(); public != nil {
-			payload = fromAlerting(payload, public)
+			payload = apnsFromAlerting(payload, public)
 		}
 		userInfo := EncryptedPushUserInfo{nonce: encryped.Nonce}
 		if data := encryped.GetEncryptedData(); data != nil && len(data) > 0 {
@@ -205,15 +206,14 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 		n.Payload = payload
 		failures := make([]string, 0, len(task.deviceIds))
 		for _, deviceID := range task.deviceIds {
-			jmsg, _ := n.MarshalJSON()
-			workerLogger.Info("Sending push.", zap.String("message", string(jmsg)), zap.String("deviceId", deviceID))
+			workerLogger.Info("Sending push", zap.String("deviceId", deviceID))
 			n.DeviceToken = deviceID
 			beforeIO := time.Now()
 			resp, err = client.Push(n)
 			afterIO := time.Now()
 			deviceIdKey := zap.String("deviceId", deviceID)
 			if err != nil {
-				workerLogger.Error("APNS send error", zap.Error(err), zap.Any("message", n), deviceIdKey)
+				workerLogger.Error("APNS send error", zap.Error(err), deviceIdKey)
 				failsCount.Inc()
 				continue
 			} else {
@@ -228,7 +228,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 					workerLogger.Warn("APNS send error", zap.String("reason", resp.Reason), zap.Int("statusCode", resp.StatusCode), deviceIdKey)
 				}
 			} else {
-				workerLogger.Info("Sucessfully sent", deviceIdKey, zap.Any("body", task.body))
+				workerLogger.Info("Sucessfully sent", deviceIdKey)
 			}
 		}
 		pushesSent.Add(float64(len(task.deviceIds)))
