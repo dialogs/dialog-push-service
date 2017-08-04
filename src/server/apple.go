@@ -159,12 +159,16 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 		payload.Custom("user_info", userInfo)
 	}
 	if silent := task.body.GetSilentPush(); silent != nil {
+		d.logger.Warn("Ignoring silent push")
+		return nil
+		/*
 		if d.config.IsVoip {
 			d.logger.Warn("Attempted non-voip using voip certificate")
 			return nil
 		}
 		payload.ContentAvailable()
 		payload.Sound("")
+		*/
 	}
 	if seq := task.body.GetSeq(); seq > 0 {
 		payload.Custom("seq", seq)
@@ -201,6 +205,12 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 		if payload == nil {
 			continue
 		}
+		/*
+		if task.body.TimeToLive > 0 {
+			n.Expiration = time.Now().Add(task.body.TimeToLive * time.Second)
+		}
+		*/
+		n.Expiration = time.Now().Add(20*time.Minute)
 		n.CollapseID = task.body.GetCollapseKey()
 		n.Topic = d.config.Topic
 		n.Payload = payload
