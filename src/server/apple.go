@@ -117,6 +117,9 @@ func apnsFromAlerting(payload *pl.Payload, alerting *AlertingPush) *pl.Payload {
 	if len(alerting.Sound) > 0 {
 		payload.Sound(alerting.Sound)
 	}
+	if badge := alerting.GetBadge(); badge > 0 {
+		payload.Badge(int(badge))
+	}
 	return payload
 }
 
@@ -138,7 +141,9 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 		}
 		if !d.config.AllowAlerts {
 			d.logger.Warn("Alerting pushes are disabled, sending silent instead")
-			payload.Badge(int(alerting.GetBadge()))
+			if badge := alerting.GetBadge(); badge > 0 {
+			  payload.Badge(int(badge))
+			}
 			payload.ContentAvailable()
 			payload.Sound("")
 		} else {
@@ -205,6 +210,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 		if payload == nil {
 			continue
 		}
+		workerLogger.Info("Push transformation", zap.Any("body", task.body), zap.Any("payload", payload))
 		/*
 		if task.body.TimeToLive > 0 {
 			n.Expiration = time.Now().Add(task.body.TimeToLive * time.Second)
