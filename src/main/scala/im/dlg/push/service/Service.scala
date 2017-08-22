@@ -5,9 +5,9 @@ import io.grpc.stub.StreamObserver
 import im.dlg.push.service.push_service._
 import scala.concurrent.Future
 
-final case class PushService(host: String, port: Int) {
+final case class PushService(host: String, port: Int, usePlainText: Boolean = true) {
   private val channel =
-    ManagedChannelBuilder.forAddress(host, port).usePlaintext(true).build
+    ManagedChannelBuilder.forAddress(host, port).usePlaintext(usePlainText).build
 
   private val asyncStub = PushingGrpc.stub(channel)
 

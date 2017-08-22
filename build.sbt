@@ -5,7 +5,7 @@ organization := "im.dlg"
 
 name := "dialog-push-service"
 
-version := "0.0.4.1-crypto"
+version := "0.0.4.3"
 
 scalaVersion := "2.11.11"
 
