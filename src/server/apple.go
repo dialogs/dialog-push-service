@@ -1,17 +1,20 @@
 package main
 
 import (
+	"crypto"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
+	"fmt"
+	"io/ioutil"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 	apns "github.com/sideshow/apns2"
 	pl "github.com/sideshow/apns2/payload"
-	"io/ioutil"
-	"github.com/prometheus/client_golang/prometheus"
-	"time"
-	"crypto"
-	"strings"
-	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -22,11 +25,6 @@ type APNSDeliveryProvider struct {
 	cert   tls.Certificate
 	config apnsConfig
 	logger *zap.Logger
-}
-
-type EncryptedPushUserInfo struct {
-	encryptedData []byte
-	nonce int64
 }
 
 func (d APNSDeliveryProvider) getWorkerName() string {
@@ -142,7 +140,7 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 		if !d.config.AllowAlerts {
 			d.logger.Warn("Alerting pushes are disabled, sending silent instead")
 			if badge := alerting.GetBadge(); badge > 0 {
-			  payload.Badge(int(badge))
+				payload.Badge(int(badge))
 			}
 			payload.ContentAvailable()
 			payload.Sound("")
@@ -154,25 +152,33 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 		if public := encryped.GetPublicAlertingPush(); public != nil {
 			payload = apnsFromAlerting(payload, public)
 		}
-		userInfo := EncryptedPushUserInfo{nonce: encryped.Nonce}
+		userInfo := make(map[string]string)
+		userInfo["nonce"] = strconv.Itoa(int(encryped.Nonce))
 		if data := encryped.GetEncryptedData(); data != nil && len(data) > 0 {
-			userInfo.encryptedData = data
+			userInfo["encrypted_data"] = base64.StdEncoding.EncodeToString(data)
 		} else {
 			d.logger.Warn("Encrypted push without encrypted data, ignoring")
 			return nil
 		}
+		payload.MutableContent()
 		payload.Custom("user_info", userInfo)
+		// if encoded, err := json.Marshal(userInfo); err == nil {
+		// 	payload.MutableContent()
+		// 	payload.Custom("user_info", base64.StdEncoding.EncodeToString(encoded))
+		// } else {
+		// 	d.logger.Warn("Failed to marshal", zap.Error(err), zap.Any("user_info", userInfo))
+		// }
 	}
 	if silent := task.body.GetSilentPush(); silent != nil {
 		d.logger.Warn("Ignoring silent push")
 		return nil
 		/*
-		if d.config.IsVoip {
-			d.logger.Warn("Attempted non-voip using voip certificate")
-			return nil
-		}
-		payload.ContentAvailable()
-		payload.Sound("")
+			if d.config.IsVoip {
+				d.logger.Warn("Attempted non-voip using voip certificate")
+				return nil
+			}
+			payload.ContentAvailable()
+			payload.Sound("")
 		*/
 	}
 	if seq := task.body.GetSeq(); seq > 0 {
@@ -197,9 +203,9 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 	var task PushTask
 	client := d.getClient()
 	subsystemName := strings.Replace(workerName, ".", "_", -1)
-	successCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"apns", Subsystem: subsystemName, Name: "processed_tasks", Help: "Tasks processed by worker"})
-	failsCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"apns", Subsystem: subsystemName, Name: "failed_tasks", Help: "Failed tasks"})
-	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"apns", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
+	successCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "apns", Subsystem: subsystemName, Name: "processed_tasks", Help: "Tasks processed by worker"})
+	failsCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "apns", Subsystem: subsystemName, Name: "failed_tasks", Help: "Failed tasks"})
+	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "apns", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
 	prometheus.MustRegister(successCount, failsCount, pushesSent)
 	workerLogger := d.logger.With(zap.String("worker", workerName))
 	workerLogger.Info(fmt.Sprintf("Started APNS worker (%s).", d.getPushStatus()))
@@ -212,11 +218,11 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 		}
 		workerLogger.Info("Push transformation", zap.Any("body", task.body), zap.Any("payload", payload))
 		/*
-		if task.body.TimeToLive > 0 {
-			n.Expiration = time.Now().Add(task.body.TimeToLive * time.Second)
-		}
+			if task.body.TimeToLive > 0 {
+				n.Expiration = time.Now().Add(task.body.TimeToLive * time.Second)
+			}
 		*/
-		n.Expiration = time.Now().Add(20*time.Minute)
+		n.Expiration = time.Now().Add(20 * time.Minute)
 		n.CollapseID = task.body.GetCollapseKey()
 		n.Topic = d.config.Topic
 		n.Payload = payload
@@ -256,9 +262,9 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 
 func (d APNSDeliveryProvider) shouldInvalidate(res string) bool {
 	return res == apns.ReasonBadDeviceToken ||
-	       res == apns.ReasonUnregistered ||
-	       res == apns.ReasonMissingDeviceToken ||
-	       res == apns.ReasonDeviceTokenNotForTopic
+		res == apns.ReasonUnregistered ||
+		res == apns.ReasonMissingDeviceToken ||
+		res == apns.ReasonDeviceTokenNotForTopic
 }
 
 func (d APNSDeliveryProvider) getWorkersPool() workersPool {
