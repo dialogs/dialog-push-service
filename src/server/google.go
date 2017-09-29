@@ -1,12 +1,13 @@
 package main
 
 import (
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/edganiukov/fcm"
 	"github.com/prometheus/client_golang/prometheus"
-	"time"
-	"strings"
 	"go.uber.org/zap"
-	"strconv"
 )
 
 var fcmIOHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "google", Name: "fcm_io", Help: "Time spent in interactions with FCM"})
@@ -43,6 +44,14 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 		d.logger.Warn("VOIP pushes are not supported, sending silent push instead")
 		msg.Data["callId"] = voip.GetCallId()
 		msg.Data["attemptIndex"] = voip.GetAttemptIndex()
+		msg.Data["displayName"] = voip.GetDisplayName()
+		msg.Data["eventBusId"] = voip.GetEventBusId()
+		if peer := voip.GetPeer(); peer != nil {
+			msg.Data["peer"] = map[string]string{
+				"id":    strconv.Itoa(int(peer.Id)),
+				"type":  strconv.Itoa(int(peer.Type)),
+				"strId": peer.StrId}
+		}
 	}
 	if alerting := task.body.GetAlertingPush(); alerting != nil {
 		if !d.config.AllowAlerts {
@@ -89,9 +98,9 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 		return
 	}
 	subsystemName := strings.Replace(workerName, ".", "_", -1)
-	successCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"google", Subsystem: subsystemName, Name: "processed_tasks", Help: "Tasks processed by worker"})
-	failsCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"google", Subsystem: subsystemName, Name: "failed_tasks", Help: "Failed tasks"})
-	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace:"google", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
+	successCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "google", Subsystem: subsystemName, Name: "processed_tasks", Help: "Tasks processed by worker"})
+	failsCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "google", Subsystem: subsystemName, Name: "failed_tasks", Help: "Failed tasks"})
+	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "google", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
 	prometheus.MustRegister(successCount, failsCount, pushesSent)
 	workerLogger.Info("Started FCM worker")
 	for task = range d.getTasksChan() {

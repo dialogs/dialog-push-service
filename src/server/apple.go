@@ -131,6 +131,15 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 		}
 		payload.Custom("callId", voip.GetCallId())
 		payload.Custom("attemptIndex", voip.GetAttemptIndex())
+		payload.Custom("displayName", voip.GetDisplayName())
+		payload.Custom("eventBusId", voip.GetEventBusId())
+		if peer := voip.GetPeer(); peer != nil {
+			peerMap := map[string]string{
+				"id":    strconv.Itoa(int(peer.Id)),
+				"type":  strconv.Itoa(int(peer.Type)),
+				"strId": peer.StrId}
+			payload.Custom("peer", peerMap)
+		}
 	}
 	if alerting := task.body.GetAlertingPush(); alerting != nil {
 		if d.config.IsVoip {
