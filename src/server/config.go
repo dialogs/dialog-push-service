@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/spf13/viper"
-	"os"
 	"errors"
+	"os"
+
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -21,6 +22,7 @@ type apnsConfig struct {
 	PemFile     string `mapstructure:"pem"`
 	IsVoip      bool   `mapstructure:"voip"`
 	AllowAlerts bool   `mapstructure:"allow-alerts"`
+	Sound       string
 	sandboxing  `mapstructure:",squash"`
 	workersPool `mapstructure:",squash"`
 }
@@ -29,7 +31,7 @@ type googleConfig struct {
 	ProjectID   string `mapstructure:"project-id"`
 	Key         string
 	Retries     uint8
-	AllowAlerts bool   `mapstructure:"allow-alerts"`
+	AllowAlerts bool `mapstructure:"allow-alerts"`
 	sandboxing  `mapstructure:",squash"`
 	workersPool `mapstructure:",squash"`
 }

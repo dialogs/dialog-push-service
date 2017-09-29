@@ -27,6 +27,7 @@ apple:
     voip: false
     sandbox: false
     pem: /config/production-ee.pem
+    sound: "dialog.wav"
   - project-id: 100607
     voip: true
     sandbox: false

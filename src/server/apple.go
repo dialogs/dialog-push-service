@@ -99,7 +99,7 @@ func loadCertificate(filename string) (cert tls.Certificate, err error) {
 	return
 }
 
-func apnsFromAlerting(payload *pl.Payload, alerting *AlertingPush) *pl.Payload {
+func apnsFromAlerting(payload *pl.Payload, alerting *AlertingPush, sound string) *pl.Payload {
 	if locAlert := alerting.GetLocAlertTitle(); locAlert != nil {
 		payload.AlertTitleLocKey(locAlert.GetLocKey())
 		payload.AlertTitleLocArgs(locAlert.GetLocArgs())
@@ -112,8 +112,8 @@ func apnsFromAlerting(payload *pl.Payload, alerting *AlertingPush) *pl.Payload {
 	} else if simpleBody := alerting.GetSimpleAlertBody(); len(simpleBody) > 0 {
 		payload.AlertBody(simpleBody)
 	}
-	if len(alerting.Sound) > 0 {
-		payload.Sound(alerting.Sound)
+	if len(sound) > 0 {
+		payload.Sound(sound)
 	}
 	if badge := alerting.GetBadge(); badge > 0 {
 		payload.Badge(int(badge))
@@ -145,12 +145,12 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 			payload.ContentAvailable()
 			payload.Sound("")
 		} else {
-			payload = apnsFromAlerting(payload, alerting)
+			payload = apnsFromAlerting(payload, alerting, d.config.Sound)
 		}
 	}
 	if encryped := task.body.GetEncryptedPush(); encryped != nil {
 		if public := encryped.GetPublicAlertingPush(); public != nil {
-			payload = apnsFromAlerting(payload, public)
+			payload = apnsFromAlerting(payload, public, d.config.Sound)
 		}
 		userInfo := make(map[string]string)
 		userInfo["nonce"] = strconv.Itoa(int(encryped.Nonce))
@@ -208,7 +208,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "apns", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
 	prometheus.MustRegister(successCount, failsCount, pushesSent)
 	workerLogger := d.logger.With(zap.String("worker", workerName))
-	workerLogger.Info(fmt.Sprintf("Started APNS worker (%s).", d.getPushStatus()))
+	workerLogger.Info(fmt.Sprintf("Started APNS worker (%s, sound=%s)", d.getPushStatus(), d.config.Sound))
 	for task = range d.getTasksChan() {
 		// TODO: avoid allocation here, reuse payload across requests
 		n := &apns.Notification{}
