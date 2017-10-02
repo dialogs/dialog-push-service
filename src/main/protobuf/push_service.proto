@@ -43,6 +43,7 @@ message VoipPush {
     string display_name = 3;
     string event_bus_id = 4;
     Peer peer = 5;
+    string update_type = 6;
 }
 
 message EncryptedPush {
