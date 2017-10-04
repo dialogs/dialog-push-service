@@ -1,1 +1,1 @@
-addSbtPlugin("im.dlg" % "sbt-dialog-houserules" % "0.1.35")
+addSbtPlugin("im.dlg" % "sbt-dialog-houserules" % "0.1.36")
