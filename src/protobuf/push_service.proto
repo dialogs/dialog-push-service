@@ -9,6 +9,18 @@ message Localizeable {
     repeated string loc_args = 2;
 }
 
+enum PeerType {
+  Private = 0;
+  Group = 1;
+  SIP = 2;
+}
+
+message Peer {
+  PeerType type = 1;
+  int32 id = 2;
+  string str_id = 3;
+}
+
 message AlertingPush {
     oneof alert_body {
         Localizeable loc_alert_body = 1;
@@ -19,17 +31,7 @@ message AlertingPush {
         string simple_alert_title = 4;
     }
     int32 badge = 6;
-}
-
-enum PeerType {
-  Private = 0;
-  Group = 1;
-}
-
-message Peer {
-  PeerType type = 1;
-  int32 id = 2;
-  string str_id = 3;
+    Peer peer = 7;
 }
 
 message VoipPush {
