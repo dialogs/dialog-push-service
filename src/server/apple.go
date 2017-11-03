@@ -156,6 +156,7 @@ func (d APNSDeliveryProvider) getPayload(task PushTask) *pl.Payload {
 			payload.Sound("")
 		} else {
 			payload = apnsFromAlerting(payload, alerting, d.config.Sound)
+			payload.MutableContent()
 		}
 	}
 	if encryped := task.body.GetEncryptedPush(); encryped != nil {
