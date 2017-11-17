@@ -41,6 +41,7 @@ message VoipPush {
     string event_bus_id = 4;
     Peer peer = 5;
     string update_type = 6;
+    string disposal_reason = 7;
 }
 
 message EncryptedPush {

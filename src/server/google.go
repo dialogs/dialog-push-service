@@ -47,6 +47,7 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 		msg.Data["displayName"] = voip.GetDisplayName()
 		msg.Data["eventBusId"] = voip.GetEventBusId()
 		msg.Data["updateType"] = voip.GetUpdateType()
+		msg.Data["disposalReason"] = voip.GetDisposalReason()
 		if peer := voip.GetPeer(); peer != nil {
 			msg.Data["peer"] = map[string]string{
 				"id":    strconv.Itoa(int(peer.Id)),
