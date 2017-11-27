@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"strconv"
 	"strings"
 	"time"
@@ -38,7 +39,7 @@ func fcmFromAlerting(n *fcm.Notification, alerting *AlertingPush) *fcm.Notificat
 	return n
 }
 
-func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTask) {
+func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTask) bool {
 	msg.RegistrationIDs = task.deviceIds
 	if voip := task.body.GetVoipPush(); voip != nil {
 		d.logger.Warn("VOIP pushes are not supported, sending silent push instead")
@@ -54,6 +55,20 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 				"type":  strconv.Itoa(int(peer.Type)),
 				"strId": peer.StrId}
 		}
+	}
+	if encrypted := task.body.GetEncryptedPush(); encrypted != nil {
+		if public := encrypted.GetPublicAlertingPush(); public != nil {
+			msg.Notification = fcmFromAlerting(msg.Notification, public)
+		}
+		userInfo := make(map[string]string)
+		userInfo["nonce"] = strconv.Itoa(int(encrypted.Nonce))
+		if data := encrypted.GetEncryptedData(); data != nil && len(data) > 0 {
+			userInfo["encrypted"] = base64.StdEncoding.EncodeToString(data)
+		} else {
+			d.logger.Warn("Encrypted push without encrypted data, ignoring")
+			return false
+		}
+		msg.Data["userInfo"] = userInfo
 	}
 	if alerting := task.body.GetAlertingPush(); alerting != nil {
 		if !d.config.AllowAlerts {
@@ -71,6 +86,7 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 	if seq := task.body.GetSeq(); seq > 0 {
 		msg.Data["seq"] = seq
 	}
+	return true
 }
 
 func resetFcmMessage(msg *fcm.Message) {
@@ -107,7 +123,9 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 	workerLogger.Info("Started FCM worker")
 	for task = range d.getTasksChan() {
 		resetFcmMessage(msg)
-		d.populateFcmMessage(msg, task)
+		if !d.populateFcmMessage(msg, task) {
+			continue
+		}
 		msg.RegistrationIDs = task.deviceIds
 		workerLogger.Info("Sending push", zap.Strings("deviceId", msg.RegistrationIDs))
 		beforeIO := time.Now()
