@@ -86,6 +86,12 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 	if seq := task.body.GetSeq(); seq > 0 {
 		msg.Data["seq"] = seq
 	}
+	if data, err := task.body.Marshal(); err != nil {
+		d.logger.Error("Failed to marshall task body. Ignoring push", zap.Error(err))
+		return false
+	} else {
+		msg.Data["body"] = base64.StdEncoding.EncodeToString(data)
+	}
 	return true
 }
 
