@@ -5,12 +5,13 @@ organization := "im.dlg"
 
 name := "dialog-push-service"
 
-version := "0.0.6.1"
+version := "0.0.6.5"
 
 scalaVersion := "2.11.11"
 
 libraryDependencies ++= Seq(
-  "io.grpc" % "grpc-netty" % "1.2.0",
+  "io.grpc" % "grpc-netty" % "1.0.3",
+  "io.netty" % "netty-tcnative-boringssl-static"% "1.1.33.Fork23" exclude("com.google.guava", "guava"),
   "com.trueaccord.scalapb" %% "scalapb-runtime" % scalapbVersion % "protobuf",
   "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion
 )

@@ -3,14 +3,13 @@ package main
 import (
 	"io"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	log "github.com/sirupsen/logrus"
+
 	"golang.org/x/net/context"
 )
 
 type PushingServerImpl struct {
 	providers map[string]DeliveryProvider
-	logger    *zap.Logger
 }
 
 func workerOutputLoop(projectId string, rsp chan *Response, in chan []string) {
@@ -23,7 +22,6 @@ func workerOutputLoop(projectId string, rsp chan *Response, in chan []string) {
 
 func (p PushingServerImpl) startStream(requests chan *Push, responses chan *Response) {
 	resps := make(map[string]chan []string, len(p.providers))
-	projectIdToKeys := make(map[string]zapcore.Field, len(p.providers))
 	defer func() {
 		for _, ch := range resps {
 			close(ch)
@@ -31,29 +29,28 @@ func (p PushingServerImpl) startStream(requests chan *Push, responses chan *Resp
 	}()
 	for projectId := range p.providers {
 		out := make(chan []string)
-		projectIdToKeys[projectId] = zap.String("projectId", projectId)
 		resps[projectId] = out
 		// TODO: make timed output with aggregated results? [groupedWithin]
 		go workerOutputLoop(projectId, responses, out)
 	}
 	for req := range requests {
+		log.Infof("Incoming request: %+v", req)
 		for projectId, deviceList := range req.GetDestinations() {
 			deviceIds := deviceList.GetDeviceIds()
 			provider, exists := p.providers[projectId]
 			if !exists {
-				p.logger.Error("No provider found for projectId", zap.String("unknownProjectId", projectId))
+				log.WithField("correlationId", req.CorrelationId).Errorf("No provider found for projectId: %s", projectId)
 				continue
 			}
 			if len(deviceIds) == 0 {
-				p.logger.Info("Empty deviceIds", projectIdToKeys[projectId])
+				log.WithField("correlationId", req.CorrelationId).Infof("Empty deviceIds", req.CorrelationId)
 				continue
 			}
 			if len(deviceIds) >= 1000 {
-				p.logger.Warn("DeviceIds array should contain at most 999 items", projectIdToKeys[projectId])
+				log.WithField("correlationId", req.CorrelationId).Warnf(" DeviceIds array should contain at most 999 items", req.CorrelationId)
 				continue
 			}
-			p.logger.Info("GRPC Request", projectIdToKeys[projectId], zap.Any("body", req.GetBody()), zap.Strings("deviceIds", deviceIds))
-			provider.getTasksChan() <- PushTask{deviceIds: deviceIds, body: req.GetBody(), resp: resps[projectId]}
+			provider.getTasksChan() <- PushTask{deviceIds: deviceIds, body: req.GetBody(), resp: resps[projectId], correlationId: req.CorrelationId}
 		}
 	}
 }
@@ -72,7 +69,7 @@ func streamOut(stream Pushing_PushStreamServer, responses chan *Response, errch 
 	}
 }
 
-func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan error, logger *zap.Logger) {
+func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan error) {
 	for {
 		request, err := stream.Recv()
 		if err != nil {
@@ -80,7 +77,7 @@ func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan e
 			return
 		}
 		if request == nil {
-			logger.Info("Empty push, skipping")
+			log.Info("Empty push, skipping")
 			continue
 		}
 		requests <- request
@@ -88,7 +85,7 @@ func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan e
 }
 
 func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
-	p.logger.Info("Starting stream")
+	log.Info("Starting stream")
 	errch := make(chan error)
 	requests := make(chan *Push)
 	responses := make(chan *Response)
@@ -96,16 +93,16 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 		close(requests)
 		close(responses)
 		close(errch)
-		p.logger.Info("Closing stream")
+		log.Infof("Closing stream")
 	}()
 	go p.startStream(requests, responses)
 	go streamOut(stream, responses, errch)
-	go streamIn(stream, requests, errch, p.logger)
+	go streamIn(stream, requests, errch)
 	err := <-errch
 	if err == nil || err == io.EOF {
-		p.logger.Info("Stream completed normally")
+		log.Info("Stream completed normally")
 	} else {
-		p.logger.Error("Stopping stream due to error", zap.Error(err))
+		log.Errorf("Stopping stream due to error: %s", err.Error())
 	}
 	return err
 }
@@ -116,12 +113,12 @@ func ensureProjectIdUniqueness(projectId string, providers map[string]DeliveryPr
 }
 
 func newPushingServer(config *serverConfig) PushingServer {
-	p := PushingServerImpl{providers: make(map[string]DeliveryProvider), logger: config.Logger}
+	p := PushingServerImpl{providers: make(map[string]DeliveryProvider)}
 	for _, c := range config.getProviderConfigs() {
 		if !ensureProjectIdUniqueness(c.getProjectID(), p.providers) {
-			config.Logger.Fatal("Duplicate project id", zap.String("projectId", c.getProjectID()))
+			log.Fatalf("Duplicate project id: %s", c.getProjectID())
 		}
-		provider := c.newProvider(config.Logger)
+		provider := c.newProvider()
 		spawnWorkers(provider)
 		p.providers[c.getProjectID()] = provider
 	}

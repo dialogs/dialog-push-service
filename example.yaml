@@ -1,5 +1,6 @@
 grpc-port: 8010
 http-port: 8011
+raven-dsn: "https://bd91d10f1bef402bb9eb514241df4203:b61f3bb52492403387f376421289002a@sentry.transmit.im/20"
 google:
   - project-id: 251541100516
     key: my-precious-key

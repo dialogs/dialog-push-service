@@ -26,6 +26,13 @@ message Peer {
   string str_id = 3;
 }
 
+message OutPeer {
+  PeerType type = 1;
+  int32 id = 2;
+  int64 accessHash = 3;
+  string str_id = 4;
+}
+
 message AlertingPush {
     oneof alert_body {
         Localizeable loc_alert_body = 1;
@@ -47,6 +54,7 @@ message VoipPush {
     Peer peer = 5;
     string update_type = 6;
     string disposal_reason = 7;
+    OutPeer outPeer = 8;
 }
 
 message EncryptedPush {
@@ -74,6 +82,7 @@ message DeviceIdList {
 message Push {
     map<string, DeviceIdList> destinations = 1;
     PushBody body = 2;
+    string correlation_id = 3;
 }
 
 message Response {

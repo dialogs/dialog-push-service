@@ -12,4 +12,4 @@ package_name: "im.dlg.push.service";\
 '
 rm src/main/protobuf/*.proto.backup
 
-sbt clean compile publish
+sbt clean compile publish-local

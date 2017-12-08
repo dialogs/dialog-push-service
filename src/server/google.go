@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/edganiukov/fcm"
+	raven "github.com/getsentry/raven-go"
 	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 	"go.uber.org/zap"
 )
 
@@ -16,7 +18,6 @@ var fcmIOHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace:
 type GoogleDeliveryProvider struct {
 	tasks  chan PushTask
 	config googleConfig
-	logger *zap.Logger
 }
 
 var ErrInvalidRegistration = fcm.ErrInvalidRegistration.Error()
@@ -39,10 +40,10 @@ func fcmFromAlerting(n *fcm.Notification, alerting *AlertingPush) *fcm.Notificat
 	return n
 }
 
-func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTask) bool {
+func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTask, logger *log.Entry) bool {
 	msg.RegistrationIDs = task.deviceIds
 	if voip := task.body.GetVoipPush(); voip != nil {
-		d.logger.Warn("VOIP pushes are not supported, sending silent push instead")
+		logger.Warn("VOIP pushes are not supported, sending silent push instead")
 		msg.Data["callId"] = voip.GetCallId()
 		msg.Data["attemptIndex"] = voip.GetAttemptIndex()
 		msg.Data["displayName"] = voip.GetDisplayName()
@@ -55,6 +56,13 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 				"type":  strconv.Itoa(int(peer.Type)),
 				"strId": peer.StrId}
 		}
+		if outPeer := voip.GetOutPeer(); outPeer != nil {
+			msg.Data["outPeer"] = map[string]string{
+				"id":         strconv.Itoa(int(outPeer.Id)),
+				"type":       strconv.Itoa(int(outPeer.Type)),
+				"accessHash": strconv.Itoa(int(outPeer.AccessHash)),
+				"strId":      outPeer.StrId}
+		}
 	}
 	if encrypted := task.body.GetEncryptedPush(); encrypted != nil {
 		if public := encrypted.GetPublicAlertingPush(); public != nil {
@@ -65,14 +73,14 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 		if data := encrypted.GetEncryptedData(); data != nil && len(data) > 0 {
 			userInfo["encrypted"] = base64.StdEncoding.EncodeToString(data)
 		} else {
-			d.logger.Warn("Encrypted push without encrypted data, ignoring")
+			logger.Warn("Encrypted push without encrypted data, ignoring")
 			return false
 		}
 		msg.Data["userInfo"] = userInfo
 	}
 	if alerting := task.body.GetAlertingPush(); alerting != nil {
 		if !d.config.AllowAlerts {
-			d.logger.Warn("Alerting pushes are not supported for FCM, sending silent push instead")
+			logger.Warn("Alerting pushes are not supported for FCM, sending silent push instead")
 		} else {
 			msg.Notification = fcmFromAlerting(msg.Notification, alerting)
 		}
@@ -87,7 +95,7 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 		msg.Data["seq"] = seq
 	}
 	if data, err := task.body.Marshal(); err != nil {
-		d.logger.Error("Failed to marshall task body. Ignoring push", zap.Error(err))
+		logger.Error("Failed to marshall task body. Ignoring push", zap.Error(err))
 		return false
 	} else {
 		msg.Data["body"] = base64.StdEncoding.EncodeToString(data)
@@ -116,9 +124,10 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 	msg := &fcm.Message{Data: make(map[string]interface{}), Priority: "high", DryRun: d.config.IsSandbox}
 	var resp *fcm.Response
 	client, err := d.getClient()
-	workerLogger := d.logger.With(zap.String("worker", workerName), zap.String("key", d.config.Key))
+	workerLogger := log.NewEntry(log.StandardLogger()).WithField("worker", workerName)
 	if err != nil {
-		workerLogger.Error("Error in spawning FCM worker", zap.Error(err))
+		workerLogger.Errorf("Error in spawning FCM worker: %s", err.Error())
+		raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
 		return
 	}
 	subsystemName := strings.Replace(workerName, ".", "_", -1)
@@ -128,18 +137,19 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 	prometheus.MustRegister(successCount, failsCount, pushesSent)
 	workerLogger.Info("Started FCM worker")
 	for task = range d.getTasksChan() {
+		taskLogger := workerLogger.WithField("id", task.correlationId)
 		resetFcmMessage(msg)
-		if !d.populateFcmMessage(msg, task) {
+		if !d.populateFcmMessage(msg, task, taskLogger) {
 			continue
 		}
 		msg.RegistrationIDs = task.deviceIds
-		workerLogger.Info("Sending push", zap.Strings("deviceId", msg.RegistrationIDs))
+		taskLogger.Infof("Sending push")
 		beforeIO := time.Now()
 		resp, err = client.SendWithRetry(msg, int(d.config.Retries))
 		afterIO := time.Now()
-		deviceIdKey := zap.Strings("deviceId", task.deviceIds)
 		if err != nil {
-			workerLogger.Error("FCM response error", zap.Error(err), deviceIdKey)
+			taskLogger.Errorf("FCM response error: %s", err.Error())
+			raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
 			failsCount.Inc()
 			continue
 		} else {
@@ -154,7 +164,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 					if d.shouldInvalidate(r.Error.Error()) {
 						failures = append(failures, task.deviceIds[k])
 					} else {
-						workerLogger.Error("FCM response error", zap.String("deviceId", task.deviceIds[k]), zap.Error(err))
+						taskLogger.Errorf("FCM response error for deviceId = %s: %s", task.deviceIds[k], err.Error())
 					}
 				}
 			}
@@ -162,7 +172,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 				task.resp <- failures
 			}
 		} else {
-			workerLogger.Info("Sucessfully sent", deviceIdKey)
+			taskLogger.Info("Sucessfully sent")
 		}
 	}
 }
@@ -175,8 +185,8 @@ func (d GoogleDeliveryProvider) getWorkersPool() workersPool {
 	return d.config.workersPool
 }
 
-func (config googleConfig) newProvider(logger *zap.Logger) DeliveryProvider {
+func (config googleConfig) newProvider() DeliveryProvider {
 	tasks := make(chan PushTask)
-	provider := GoogleDeliveryProvider{tasks: tasks, config: config, logger: logger}
+	provider := GoogleDeliveryProvider{tasks: tasks, config: config}
 	return provider
 }

@@ -2,61 +2,64 @@ package main
 
 import (
 	"fmt"
-	"github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/jessevdk/go-flags"
-	"github.com/mwitkow/go-grpc-middleware"
-	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/grpc"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"go.uber.org/zap"
-	"google.golang.org/grpc/grpclog"
+
+	raven "github.com/getsentry/raven-go"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/jessevdk/go-flags"
+	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
+
+	"google.golang.org/grpc"
 )
 
 var opts struct {
-	ConfigLocation string `short:"c" long:"config" description:"Config file location" required:"true"`
+	ConfigLocation   string `short:"c" long:"config" description:"Config file location" required:"true"`
 	StupidUnusedArgs string `short:"g" long:"gelf" description:"Unusued"`
 }
 
 func (config *serverConfig) startGrpc() *grpc.Server {
 	pushingServer := newPushingServer(config)
+	logrusEntry := log.NewEntry(log.StandardLogger())
 	grpcServer := grpc.NewServer(
-		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(grpc_prometheus.StreamServerInterceptor)),
+		grpc_middleware.WithStreamServerChain(
+			grpc_logrus.StreamServerInterceptor(logrusEntry),
+			grpc_prometheus.StreamServerInterceptor,
+		),
+		//grpc.Creds(c)
 	)
 	grpc_prometheus.Register(grpcServer)
 	RegisterPushingServer(grpcServer, pushingServer)
 	return grpcServer
 }
 
-
 func StartServer() {
 	var config *serverConfig
 	var err error
 	if _, err = flags.ParseArgs(&opts, os.Args); err != nil {
-		grpclog.Fatalf("Failed to parse arguments: #%v", err)
+		log.Fatalf("Failed to parse arguments: %s", err.Error())
 	}
-	// TODO: make this configurable
-	logger, err := zap.NewProduction()
-	if err != nil {
-		grpclog.Fatalf("Failed to initializer logger: %#v", err)
+	if config, err = loadConfig(opts.ConfigLocation); err != nil {
+		log.Fatalf("Failed to parse config: %s", err.Error())
 	}
-	defer logger.Sync()
-	if config, err = loadConfig(opts.ConfigLocation, logger); err != nil {
-		logger.Fatal("Failed to parse config.", zap.Error(err))
-	}
+	grpc_logrus.ReplaceGrpcLogger(log.NewEntry(log.StandardLogger()))
 	grpcServer := config.startGrpc()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.GrpcPort))
 	if err != nil {
-		logger.Fatal("Failed to start gRPC server.", zap.Error(err))
+		log.Fatalf("Failed to start gRPC server: %s", err.Error())
 	}
+	raven.SetDSN(config.RavenDsn)
 	prometheus.MustRegister(fcmIOHistogram, apnsIOHistogram)
 	http.Handle("/metrics", prometheus.Handler())
 	go func() {
-		logger.Info("Started HTTP server.", zap.Uint16("port", config.HTTPPort))
+		log.Infof("Started HTTP server at %d", config.HTTPPort)
 		panic(http.ListenAndServe(fmt.Sprintf(":%d", config.HTTPPort), nil))
 	}()
-	logger.Info("Started gRPC server.", zap.Uint16("port", config.GrpcPort))
+	log.Infof("Started gRPC server at %d", config.GrpcPort)
 	panic(grpcServer.Serve(lis))
 }

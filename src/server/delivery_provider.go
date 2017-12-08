@@ -1,11 +1,16 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	raven "github.com/getsentry/raven-go"
+)
 
 type PushTask struct {
-	deviceIds []string
-	body      *PushBody
-	resp      chan []string
+	deviceIds     []string
+	body          *PushBody
+	resp          chan []string
+	correlationId string
 }
 
 type DeliveryProvider interface {
@@ -18,6 +23,8 @@ type DeliveryProvider interface {
 
 func spawnWorkers(d DeliveryProvider) {
 	for i := 0; i < int(d.getWorkersPool().Workers); i++ {
-		go d.spawnWorker(fmt.Sprintf("%s.%d", d.getWorkerName(), i))
+		go raven.CapturePanic(func() {
+			d.spawnWorker(fmt.Sprintf("%s.%d", d.getWorkerName(), i))
+		}, map[string]string{"worker": d.getWorkerName()})
 	}
 }
