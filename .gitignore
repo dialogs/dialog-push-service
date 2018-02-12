@@ -4,4 +4,5 @@ pkg
 *.pem
 *.yaml
 .glide
+src/python
 target/
