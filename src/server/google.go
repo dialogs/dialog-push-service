@@ -53,13 +53,13 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 		if peer := voip.GetPeer(); peer != nil {
 			msg.Data["peer"] = map[string]string{
 				"id":    strconv.Itoa(int(peer.Id)),
-				"type":  strconv.Itoa(int(peer.Type)),
+				"type":  strconv.Itoa(peerTypeProtobufToMPS(peer.Type)),
 				"strId": peer.StrId}
 		}
 		if outPeer := voip.GetOutPeer(); outPeer != nil {
 			msg.Data["outPeer"] = map[string]string{
 				"id":         strconv.Itoa(int(outPeer.Id)),
-				"type":       strconv.Itoa(int(outPeer.Type)),
+				"type":       strconv.Itoa(protoPeerTypeToDialogPeerType(outPeer.Type)),
 				"accessHash": strconv.Itoa(int(outPeer.AccessHash)),
 				"strId":      outPeer.StrId}
 		}

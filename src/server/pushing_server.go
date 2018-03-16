@@ -12,6 +12,19 @@ type PushingServerImpl struct {
 	providers map[string]DeliveryProvider
 }
 
+func peerTypeProtobufToMPS(peerType PeerType) int {
+	switch peerType {
+	case Private:
+		return 1
+	case Group:
+		return 2
+	case SIP:
+		return 4
+	default:
+		return 0
+	}
+}
+
 func workerOutputLoop(projectId string, rsp chan *Response, in chan []string) {
 	for res := range in {
 		inv := make(map[string]*DeviceIdList, 1)
