@@ -10,7 +10,6 @@ import (
 	raven "github.com/getsentry/raven-go"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	"go.uber.org/zap"
 )
 
 var fcmIOHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "google", Name: "fcm_io", Help: "Time spent in interactions with FCM"})
@@ -95,7 +94,7 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 		msg.Data["seq"] = seq
 	}
 	if data, err := task.body.Marshal(); err != nil {
-		logger.Error("Failed to marshall task body. Ignoring push", zap.Error(err))
+		logger.Errorf("Failed to marshall task body. Ignoring push: %s", err.Error())
 		return false
 	} else {
 		msg.Data["body"] = base64.StdEncoding.EncodeToString(data)
