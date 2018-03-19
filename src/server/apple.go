@@ -145,7 +145,7 @@ func (d APNSDeliveryProvider) getPayload(task PushTask, logger *log.Entry) *pl.P
 		if outPeer := voip.GetOutPeer(); outPeer != nil {
 			peerMap := map[string]string{
 				"id":         strconv.Itoa(int(outPeer.Id)),
-				"type":       strconv.Itoa(protoPeerTypeToDialogPeerType(outPeer.Type)),
+				"type":       strconv.Itoa(peerTypeProtobufToMPS(outPeer.Type)),
 				"accessHash": strconv.Itoa(int(outPeer.AccessHash)),
 				"strId":      outPeer.StrId}
 			payload.Custom("outPeer", peerMap)
