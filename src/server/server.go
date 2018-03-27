@@ -41,6 +41,7 @@ func (config *serverConfig) startGrpc() *grpc.Server {
 func StartServer() {
 	var config *serverConfig
 	var err error
+	log.SetFormatter(&log.JSONFormatter{})
 	if _, err = flags.ParseArgs(&opts, os.Args); err != nil {
 		log.Fatalf("Failed to parse arguments: %s", err.Error())
 	}
