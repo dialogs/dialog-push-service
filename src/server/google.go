@@ -3,16 +3,12 @@ package main
 import (
 	"encoding/base64"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/edganiukov/fcm"
 	raven "github.com/getsentry/raven-go"
-	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
-
-var fcmIOHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "google", Name: "fcm_io", Help: "Time spent in interactions with FCM"})
 
 type GoogleDeliveryProvider struct {
 	tasks  chan PushTask
@@ -117,7 +113,7 @@ func (d GoogleDeliveryProvider) getClient() (*fcm.Client, error) {
 	return client, err
 }
 
-func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
+func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics) {
 	var err error
 	var task PushTask
 	msg := &fcm.Message{Data: make(map[string]interface{}), Priority: "high", DryRun: d.config.IsSandbox}
@@ -129,11 +125,6 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 		raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
 		return
 	}
-	subsystemName := strings.Replace(workerName, ".", "_", -1)
-	successCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "google", Subsystem: subsystemName, Name: "processed_tasks", Help: "Tasks processed by worker"})
-	failsCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "google", Subsystem: subsystemName, Name: "failed_tasks", Help: "Failed tasks"})
-	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "google", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
-	prometheus.MustRegister(successCount, failsCount, pushesSent)
 	workerLogger.Info("Started FCM worker")
 	for task = range d.getTasksChan() {
 		taskLogger := workerLogger.WithField("id", task.correlationId)
@@ -149,12 +140,12 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string) {
 		if err != nil {
 			taskLogger.Errorf("FCM response error: %s", err.Error())
 			raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
-			failsCount.Inc()
+			pm.fails.Inc()
 			continue
 		} else {
-			successCount.Inc()
-			fcmIOHistogram.Observe(afterIO.Sub(beforeIO).Seconds())
-			pushesSent.Add(float64(len(task.deviceIds)))
+			pm.success.Inc()
+			pm.io.Observe(afterIO.Sub(beforeIO).Seconds())
+			pm.pushes.Add(float64(len(task.deviceIds)))
 		}
 		if resp.Failure > 0 {
 			failures := make([]string, 0, len(task.deviceIds))

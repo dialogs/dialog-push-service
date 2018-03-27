@@ -126,13 +126,18 @@ func ensureProjectIdUniqueness(projectId string, providers map[string]DeliveryPr
 }
 
 func newPushingServer(config *serverConfig) PushingServer {
+	m := newMetricsCollector()
 	p := PushingServerImpl{providers: make(map[string]DeliveryProvider)}
 	for _, c := range config.getProviderConfigs() {
 		if !ensureProjectIdUniqueness(c.getProjectID(), p.providers) {
 			log.Fatalf("Duplicate project id: %s", c.getProjectID())
 		}
 		provider := c.newProvider()
-		spawnWorkers(provider)
+		pm, err := m.getMetricsForProvider(c.getKind(), c.getProjectID())
+		if err != nil {
+			log.Fatalf("Failed to create metrics for provider %s: %s", c.getProjectID(), err.Error())
+		}
+		spawnWorkers(provider, pm)
 		p.providers[c.getProjectID()] = provider
 	}
 	return p

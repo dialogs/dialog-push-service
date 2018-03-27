@@ -37,6 +37,7 @@ type googleConfig struct {
 
 type providerConstructor interface {
 	getProjectID() string
+	getKind() string
 	newProvider() DeliveryProvider
 }
 
@@ -46,6 +47,14 @@ func (g googleConfig) getProjectID() string {
 
 func (a apnsConfig) getProjectID() string {
 	return a.ProjectID
+}
+
+func (g googleConfig) getKind() string {
+	return "fcm"
+}
+
+func (a apnsConfig) getKind() string {
+	return "apns"
 }
 
 func (g googleConfig) checkConfig() (err error) {

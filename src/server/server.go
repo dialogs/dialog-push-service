@@ -55,7 +55,6 @@ func StartServer() {
 		log.Fatalf("Failed to start gRPC server: %s", err.Error())
 	}
 	raven.SetDSN(config.RavenDsn)
-	prometheus.MustRegister(fcmIOHistogram, apnsIOHistogram)
 	http.Handle("/metrics", prometheus.Handler())
 	go func() {
 		log.Infof("Started HTTP server at %d", config.HTTPPort)

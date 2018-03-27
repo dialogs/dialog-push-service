@@ -9,17 +9,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strconv"
-	"strings"
 	"time"
 
 	raven "github.com/getsentry/raven-go"
-	"github.com/prometheus/client_golang/prometheus"
 	apns "github.com/sideshow/apns2"
 	pl "github.com/sideshow/apns2/payload"
 	log "github.com/sirupsen/logrus"
 )
-
-var apnsIOHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{Namespace: "apns", Name: "apns_io", Help: "Time spent in interactions with APNS"})
 
 type APNSDeliveryProvider struct {
 	tasks  chan PushTask
@@ -215,18 +211,13 @@ func (d APNSDeliveryProvider) getPushStatus() string {
 	}
 }
 
-func (d APNSDeliveryProvider) spawnWorker(workerName string) {
+func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics) {
 	var err error
 	var resp *apns.Response
 	// TODO: there is no need in constant reallocations of pl.Payload, the allocated instance should be reused
 	var payload *pl.Payload
 	var task PushTask
 	client := d.getClient()
-	subsystemName := strings.Replace(workerName, ".", "_", -1)
-	successCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "apns", Subsystem: subsystemName, Name: "processed_tasks", Help: "Tasks processed by worker"})
-	failsCount := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "apns", Subsystem: subsystemName, Name: "failed_tasks", Help: "Failed tasks"})
-	pushesSent := prometheus.NewCounter(prometheus.CounterOpts{Namespace: "apns", Subsystem: subsystemName, Name: "pushes_sent", Help: "Pushes sent (w/o result checK)"})
-	prometheus.MustRegister(successCount, failsCount, pushesSent)
 	workerLogger := log.NewEntry(log.StandardLogger()).WithField("worker", workerName)
 	workerLogger.Infof("Started APNS worker (%s, sound=%s)", d.getPushStatus(), d.config.Sound)
 	for task = range d.getTasksChan() {
@@ -258,11 +249,11 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 			if err != nil {
 				deviceLogger.Errorf("APNS send error %s", err.Error())
 				raven.CaptureError(err, map[string]string{"deviceId": deviceID, "projectId": d.config.ProjectID})
-				failsCount.Inc()
+				//metrics.fails.
 				continue
 			} else {
-				apnsIOHistogram.Observe(afterIO.Sub(beforeIO).Seconds())
-				successCount.Inc()
+				pm.io.Observe(afterIO.Sub(beforeIO).Seconds())
+				pm.success.Inc()
 			}
 			if !resp.Sent() {
 				if d.shouldInvalidate(resp.Reason) {
@@ -275,7 +266,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string) {
 				deviceLogger.Info("Sucessfully sent")
 			}
 		}
-		pushesSent.Add(float64(len(task.deviceIds)))
+		pm.pushes.Add(float64(len(task.deviceIds)))
 		if len(failures) > 0 {
 			task.resp <- failures
 		}
