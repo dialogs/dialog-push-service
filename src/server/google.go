@@ -58,6 +58,7 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 				"accessHash": strconv.Itoa(int(outPeer.AccessHash)),
 				"strId":      outPeer.StrId}
 		}
+		msg.Data["video"] = voip.GetVideo()
 	}
 	if encrypted := task.body.GetEncryptedPush(); encrypted != nil {
 		if public := encrypted.GetPublicAlertingPush(); public != nil {

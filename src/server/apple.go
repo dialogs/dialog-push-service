@@ -146,6 +146,7 @@ func (d APNSDeliveryProvider) getPayload(task PushTask, logger *log.Entry) *pl.P
 				"strId":      outPeer.StrId}
 			payload.Custom("outPeer", peerMap)
 		}
+		payload.Custom("video", voip.GetVideo())
 	}
 	if alerting := task.body.GetAlertingPush(); alerting != nil {
 		if d.config.IsVoip {

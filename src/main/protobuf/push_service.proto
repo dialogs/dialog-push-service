@@ -55,6 +55,7 @@ message VoipPush {
     string update_type = 6;
     string disposal_reason = 7;
     OutPeer outPeer = 8;
+    bool video = 9;
 }
 
 message EncryptedPush {
