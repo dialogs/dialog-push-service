@@ -23,8 +23,9 @@ type DeliveryProvider interface {
 
 func spawnWorkers(d DeliveryProvider, pm *providerMetrics) {
 	for i := 0; i < int(d.getWorkersPool().Workers); i++ {
+		workerName := fmt.Sprintf("%s.%d", d.getWorkerName(), i)
 		go raven.CapturePanic(func() {
-			d.spawnWorker(fmt.Sprintf("%s.%d", d.getWorkerName(), i), pm)
-		}, map[string]string{"worker": d.getWorkerName()})
+			d.spawnWorker(workerName, pm)
+		}, map[string]string{"worker": workerName})
 	}
 }
