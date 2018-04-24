@@ -54,7 +54,7 @@ func newMetricsCollector() *metricsCollector {
 	metrics.io = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "push",
 		Name:      "io",
-		Help:      "Time spent in I/O with service provider"},
+		Help:      "Time spent in I/O with service provider (in nanoseconds)"},
 		[]string{"kind"})
 	prometheus.MustRegister(metrics.success, metrics.fails, metrics.pushes, metrics.io)
 	return metrics

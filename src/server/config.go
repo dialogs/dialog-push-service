@@ -35,6 +35,11 @@ type googleConfig struct {
 	workersPool `mapstructure:",squash"`
 }
 
+type noopConfig struct {
+	ProjectID   string `mapstructure:"project-id"`
+	workersPool `mapstructure:",squash"`
+}
+
 type providerConstructor interface {
 	getProjectID() string
 	getKind() string
@@ -49,12 +54,20 @@ func (a apnsConfig) getProjectID() string {
 	return a.ProjectID
 }
 
+func (n noopConfig) getProjectID() string {
+	return n.ProjectID
+}
+
 func (g googleConfig) getKind() string {
 	return "fcm"
 }
 
 func (a apnsConfig) getKind() string {
 	return "apns"
+}
+
+func (n noopConfig) getKind() string {
+	return "noop"
 }
 
 func (g googleConfig) checkConfig() (err error) {
@@ -77,9 +90,14 @@ func (a apnsConfig) checkConfig() (err error) {
 	return
 }
 
+func (n noopConfig) checkConfig() (err error) {
+	return nil
+}
+
 type serverConfig struct {
 	Google   []googleConfig
 	Apple    []apnsConfig
+	Noop     []noopConfig
 	GrpcPort uint16 `mapstructure:"grpc-port"`
 	HTTPPort uint16 `mapstructure:"http-port"`
 	RavenDsn string `mapstructure:"raven-dsn"`
@@ -92,6 +110,9 @@ func (c *serverConfig) getProviderConfigs() []providerConstructor {
 	}
 	for _, a := range c.Apple {
 		constructors = append(constructors, a)
+	}
+	for _, n := range c.Noop {
+		constructors = append(constructors, n)
 	}
 	return constructors
 }
@@ -132,6 +153,15 @@ func loadConfig(filename string) (config *serverConfig, err error) {
 		}
 		if config.Apple[k].Workers == 0 {
 			config.Apple[k].Workers = 1
+		}
+	}
+	for k := range config.Noop {
+		err = config.Noop[k].checkConfig()
+		if err != nil {
+			return
+		}
+		if config.Noop[k].Workers == 0 {
+			config.Noop[k].Workers = 1
 		}
 	}
 	return

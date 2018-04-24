@@ -145,7 +145,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 			continue
 		} else {
 			pm.success.Inc()
-			pm.io.Observe(afterIO.Sub(beforeIO).Seconds())
+			pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 			pm.pushes.Add(float64(len(task.deviceIds)))
 		}
 		if resp.Failure > 0 {

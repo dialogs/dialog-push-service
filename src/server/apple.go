@@ -253,7 +253,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 				//metrics.fails.
 				continue
 			} else {
-				pm.io.Observe(afterIO.Sub(beforeIO).Seconds())
+				pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 				pm.success.Inc()
 			}
 			if !resp.Sent() {
