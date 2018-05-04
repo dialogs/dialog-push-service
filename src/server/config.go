@@ -37,6 +37,8 @@ type googleConfig struct {
 
 type noopConfig struct {
 	ProjectID   string `mapstructure:"project-id"`
+	Delay       int
+	OnSend      func(PushTask)
 	workersPool `mapstructure:",squash"`
 }
 

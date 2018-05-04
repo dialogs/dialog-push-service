@@ -26,6 +26,12 @@
   version = "v0.2.1"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/franela/goblin"
+  packages = ["."]
+  revision = "cd5d08fb4ede9eaac1812fdb513552e7404eae2e"
+
+[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
@@ -35,7 +41,7 @@
   branch = "master"
   name = "github.com/getsentry/raven-go"
   packages = ["."]
-  revision = "d1470f50d3a3a38533355a9fab7393e25a3b4226"
+  revision = "0df589c7a903b6eb2b0df960a8719d64708476c0"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -71,7 +77,7 @@
     "tags",
     "tags/logrus"
   ]
-  revision = "b9ed6aed6cf9de7330c7c8e81d3d8e49086539e8"
+  revision = "bc175326149c6c87ca6e2b9fe58cf6d2aa1036cd"
 
 [[projects]]
   name = "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -152,7 +158,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a"
+  revision = "e5b036cc37a466a0af27d604d1ee500211d16d6a"
 
 [[projects]]
   branch = "master"
@@ -205,8 +211,8 @@
 [[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
-  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
+  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
+  version = "v1.0.1"
 
 [[projects]]
   name = "github.com/spf13/viper"
@@ -215,35 +221,10 @@
   version = "v1.0.2"
 
 [[projects]]
-  name = "go.uber.org/atomic"
-  packages = ["."]
-  revision = "8474b86a5a6f79c443ce4b2992817ff32cf208b8"
-  version = "v1.3.1"
-
-[[projects]]
-  name = "go.uber.org/multierr"
-  packages = ["."]
-  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
-  version = "v1.1.0"
-
-[[projects]]
-  name = "go.uber.org/zap"
-  packages = [
-    ".",
-    "buffer",
-    "internal/bufferpool",
-    "internal/color",
-    "internal/exit",
-    "zapcore"
-  ]
-  revision = "35aad584952c3e7020db7b839f6b102de6271f89"
-  version = "v1.7.1"
-
-[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "b2aa35443fbc700ab74c586ae79b81c171851023"
+  revision = "b0697eccbea9adec5b7ba8008f4c33d98d733388"
 
 [[projects]]
   branch = "master"
@@ -251,6 +232,7 @@
   packages = [
     "context",
     "context/ctxhttp",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
@@ -258,7 +240,7 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "61147c48b25b599e5b561d2e9c4f3e1ef489ca41"
+  revision = "5f9ae10d9af5b1c89ae6904293b14b064d4ada23"
 
 [[projects]]
   branch = "master"
@@ -267,7 +249,7 @@
     "unix",
     "windows"
   ]
-  revision = "3b87a42e500a6dc65dae1a55d0b641295971163e"
+  revision = "bb9c189858d91f42db229b04d45a4c3d23a7662a"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -294,7 +276,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "ce84044298496ef4b54b4a0a0909ba593cc60e30"
+  revision = "7fd901a49ba6a7f87732eb344f6e3c5b19d1b200"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -334,6 +316,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e97b51619b3e1be9f8cfbe7692a5be95bd85d6b5916d0612cb966e064342eb34"
+  inputs-digest = "585d448381fa8232aadd1f22ad778b0648001039423b46e74dda5173598a2c60"
   solver-name = "gps-cdcl"
   solver-version = 1

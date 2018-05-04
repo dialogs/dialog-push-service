@@ -3,11 +3,16 @@ http-port: 8011
 raven-dsn: "https://bd91d10f1bef402bb9eb514241df4203:b61f3bb52492403387f376421289002a@sentry.transmit.im/20"
 noop:
   - project-id: 1
+    delay: 5
   - project-id: 2
+    delay: 5
   - project-id: 3
+    delay: 5
   - project-id: 4
+    delay: 5
   - project-id: 5
-  - project-id: 6 
+    delay: 5
+  - project-id: 6
 google:
   - project-id: 251541100516
     key: my-precious-key

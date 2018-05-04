@@ -148,23 +148,25 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 			pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 			pm.pushes.Add(float64(len(task.deviceIds)))
 		}
+		failures := make([]string, 0, len(task.deviceIds))
 		if resp.Failure > 0 {
-			failures := make([]string, 0, len(task.deviceIds))
 			for k, r := range resp.Results {
 				if r.Error != nil {
 					if d.shouldInvalidate(r.Error.Error()) {
 						failures = append(failures, task.deviceIds[k])
 					} else {
-						taskLogger.Errorf("FCM response error for deviceId = %s: %s", task.deviceIds[k], err.Error())
+						taskLogger.Errorf("FCM response error for deviceId = %+v: %v", task.deviceIds[k], err)
 					}
 				}
 			}
-			if len(failures) > 0 {
-				task.resp <- failures
-			}
+			// We need to send responses in any case because of rqRp-cycle support
+			// if len(failures) > 0 {
+			// 	task.resp <- failures
+			// }
 		} else {
 			taskLogger.Info("Sucessfully sent")
 		}
+		task.resp <- &DeviceIdList{DeviceIds: failures}
 	}
 }
 
@@ -177,7 +179,7 @@ func (d GoogleDeliveryProvider) getWorkersPool() workersPool {
 }
 
 func (config googleConfig) newProvider() DeliveryProvider {
-	tasks := make(chan PushTask)
+	tasks := make(chan PushTask, 1)
 	provider := GoogleDeliveryProvider{tasks: tasks, config: config}
 	return provider
 }

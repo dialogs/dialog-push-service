@@ -91,4 +91,5 @@ message PongResponse {}
 service Pushing {
     rpc Ping(PingRequest) returns (PongResponse) {}
     rpc PushStream(stream Push) returns (stream Response) {}
+    rpc SinglePush(Push) returns (Response) {}
 }

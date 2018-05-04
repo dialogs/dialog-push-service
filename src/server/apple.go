@@ -229,7 +229,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 		if payload == nil {
 			continue
 		}
-		taskLogger.Infof("Push transformation: `%+v` to `%+v`", task.body, payload)
+		taskLogger.Infof("Push transformation: `%s` to `%+v`", task.body.GoString(), payload)
 		/*
 			if task.body.TimeToLive > 0 {
 				n.Expiration = time.Now().Add(task.body.TimeToLive * time.Second)
@@ -261,16 +261,18 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 					deviceLogger.Warnf("Invalidating token because of APNS response. Reason: %s", resp.Reason)
 					failures = append(failures, deviceID)
 				} else {
-					deviceLogger.Warnf("APNS send error. Reason = %s (status = %d)", resp.Reason, resp.StatusCode)
+					s := fmt.Sprintf("APNS send error. Reason = %s (status = %d)", resp.Reason, resp.StatusCode)
+					deviceLogger.Warn(s)
+					raven.CaptureMessage(s, map[string]string{"deviceId": deviceID, "projectId": d.config.ProjectID})
 				}
 			} else {
 				deviceLogger.Info("Sucessfully sent")
 			}
 		}
 		pm.pushes.Add(float64(len(task.deviceIds)))
-		if len(failures) > 0 {
-			task.resp <- failures
-		}
+		//if len(failures) > 0 { // We need to send responses in any case because of rqRp-cycle support
+		task.resp <- &DeviceIdList{DeviceIds: failures}
+		//}
 	}
 }
 
@@ -286,7 +288,7 @@ func (d APNSDeliveryProvider) getWorkersPool() workersPool {
 }
 
 func (config apnsConfig) newProvider() DeliveryProvider {
-	tasks := make(chan PushTask)
+	tasks := make(chan PushTask, 1)
 	cert, err := loadCertificate(config.PemFile)
 	if err != nil {
 		log.Fatalf("Cannot start APNS provider: %s", err.Error())

@@ -17,6 +17,9 @@ final case class PushService(host: String, port: Int, useTls: Boolean = true) {
   def ping(): Future[PongResponse] =
     asyncStub.ping(PingRequest())
 
+  def single(push: Push): Future[Response] =
+    asyncStub.singlePush(push)
+
   def stream(failures: StreamObserver[Response]): StreamObserver[Push] =
     asyncStub.pushStream(failures)
 
