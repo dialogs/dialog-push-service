@@ -96,7 +96,6 @@ func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan e
 }
 
 func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
-	log.Info("Starting stream")
 	errch := make(chan error)
 	requests := make(chan *Push)
 	responses := make(chan *Response)
@@ -114,6 +113,8 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 		// close(errch)
 		log.Infof("Closing stream: %s", addrInfo)
 	}()
+
+	log.Infof("Starting stream: %s", addrInfo)
 	go p.startStream(requests, responses)
 	go streamOut(stream, responses, errch)
 	go streamIn(stream, requests, errch)

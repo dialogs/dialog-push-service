@@ -125,7 +125,7 @@ func (d APNSDeliveryProvider) getPayload(task PushTask, logger *log.Entry) *pl.P
 			logger.Warn("Attempted voip-push using non-voip certificate")
 			return nil
 		}
-		payload.Custom("callId", voip.GetCallId())
+		payload.Custom("callId", strconv.Itoa(int(voip.GetCallId())))
 		payload.Custom("attemptIndex", voip.GetAttemptIndex())
 		payload.Custom("displayName", voip.GetDisplayName())
 		payload.Custom("eventBusId", voip.GetEventBusId())
