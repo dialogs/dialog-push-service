@@ -1,7 +1,5 @@
 FROM golang:latest
 
-RUN curl https://glide.sh/get | sh
-
 ADD src/server /go/src/server
 WORKDIR /go/src/server
 
