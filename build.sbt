@@ -1,19 +1,14 @@
-import com.trueaccord.scalapb.compiler.Version.scalapbVersion
 import im.dlg.DialogHouseRules
 
 organization := "im.dlg"
 
 name := "dialog-push-service"
 
-version := "0.2.0.2"
+version := "0.2.0.3"
 
 scalaVersion := "2.11.11"
 
-libraryDependencies ++= Seq(
-  "io.grpc" % "grpc-netty" % "1.0.3" % "provided",
-  "com.trueaccord.scalapb" %% "scalapb-runtime" % scalapbVersion % "protobuf",
-  "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion
-)
+libraryDependencies ++= DialogHouseRules.scalapbGrpcDeps ++ DialogHouseRules.scalapbDeps
 
 PB.targets in Compile := Seq(
   scalapb.gen(singleLineToString = true) → (sourceManaged in Compile).value
