@@ -79,6 +79,9 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 			logger.Warn("Alerting pushes are not supported for FCM, sending silent push instead")
 		} else {
 			msg.Notification = fcmFromAlerting(msg.Notification, alerting)
+			if mid := alerting.Mid; mid != nil {
+				msg.Data["mid"] = mid
+			}
 		}
 	}
 	if collapseKey := task.body.GetCollapseKey(); len(collapseKey) > 0 {
