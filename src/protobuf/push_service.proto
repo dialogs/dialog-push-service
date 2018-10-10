@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package main;
 
+import "google/protobuf/wrappers.proto";
+
 message SilentPush {}
 
 message Localizeable {
@@ -39,6 +41,7 @@ message AlertingPush {
     }
     int32 badge = 6;
     Peer peer = 7;
+    google.protobuf.StringValue mid = 8;
 }
 
 message VoipPush {
