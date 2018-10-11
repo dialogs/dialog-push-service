@@ -166,6 +166,9 @@ func (d APNSDeliveryProvider) getPayload(task PushTask, logger *log.Entry) *pl.P
 			if mid := alerting.Mid; mid != nil {
 				payload.Custom("mid", mid.Value)
 			}
+			if category := alerting.Category; category != nil {
+				payload.Custom("category", category.Value)
+			}
 		}
 	}
 	if encryped := task.body.GetEncryptedPush(); encryped != nil {

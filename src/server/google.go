@@ -82,6 +82,9 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 			if mid := alerting.Mid; mid != nil {
 				msg.Data["mid"] = mid.Value
 			}
+			if category := alerting.Category; category != nil {
+				msg.Data["category"] = category.Value
+			}
 		}
 	}
 	if collapseKey := task.body.GetCollapseKey(); len(collapseKey) > 0 {
