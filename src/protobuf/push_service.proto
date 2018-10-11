@@ -42,6 +42,7 @@ message AlertingPush {
     int32 badge = 6;
     Peer peer = 7;
     google.protobuf.StringValue mid = 8;
+    google.protobuf.StringValue category = 9;
 }
 
 message VoipPush {
