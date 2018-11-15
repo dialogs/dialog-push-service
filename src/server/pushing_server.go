@@ -122,7 +122,7 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	case <-stream.Context().Done():
 		// STOP
 		// CLOSE CHANS
-		return
+		return nil
 	case err := <-errch:
 		if err == nil || err == io.EOF {
 			log.Infof("Stream completed normally: %s", addrInfo)
