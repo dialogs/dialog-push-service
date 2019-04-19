@@ -34,7 +34,9 @@ func workerOutputLoop(projectId string, rsp chan *Response, in chan *DeviceIdLis
 		if len(res.DeviceIds) > 0 {
 			inv := make(map[string]*DeviceIdList, 1)
 			inv[projectId] = res
+			log.Infof("send response for projectID %s", projectId)
 			rsp <- &Response{ProjectInvalidations: inv}
+			log.Infof("send response for projectID %s complete", projectId)
 		}
 	}
 	log.Info("Closing output loop")
