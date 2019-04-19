@@ -272,13 +272,15 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 					raven.CaptureMessage(s, map[string]string{"deviceId": deviceID, "projectId": d.config.ProjectID})
 				}
 			} else {
-				deviceLogger.Info("Sucessfully sent")
+				deviceLogger.Info("Successfully sent")
 			}
 		}
 		pm.pushes.Add(float64(len(task.deviceIds)))
+		taskLogger.Infof("send push result for projectID=%s", d.config.ProjectID)
 		//if len(failures) > 0 { // We need to send responses in any case because of rqRp-cycle support
 		task.resp <- &DeviceIdList{DeviceIds: failures}
 		//}
+		taskLogger.Infof("send push result for projectID=%s completed", d.config.ProjectID)
 	}
 }
 

@@ -145,7 +145,7 @@ func mergeDeviceLists(target *DeviceIdList, source *DeviceIdList) *DeviceIdList 
 	}
 
 	result := &DeviceIdList{DeviceIds: make([]string, 0, len(set))}
-	for k, _ := range set {
+	for k := range set {
 		result.DeviceIds = append(result.DeviceIds, k)
 	}
 	return result
