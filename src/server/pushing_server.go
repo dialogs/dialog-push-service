@@ -53,6 +53,13 @@ func (p PushingServerImpl) getProvidersResponders(push *Push) map[string]chan *D
 	resps := make(map[string]chan *DeviceIdList, len(p.providers))
 	for _, projectId := range projectIds {
 		if _, ok := p.providers[projectId]; ok {
+			destinations := push.GetDestinations()
+			deviceList := destinations[projectId]
+
+			if deviceList != nil && len(deviceList.DeviceIds) == 0 && len(deviceList.DeviceIds) >= 1000 {
+				continue
+			}
+
 			resps[projectId] = make(chan *DeviceIdList, 1)
 		}
 	}
