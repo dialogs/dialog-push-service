@@ -27,7 +27,7 @@ func peerTypeProtobufToMPS(peerType PeerType) int {
 	}
 }
 
-func workerOutput(ctx context.Context, projectId string, rsp chan *Response, in chan *DeviceIdList) {
+func workerOutput(ctx context.Context, projectId string, rsp chan<- *Response, in <-chan *DeviceIdList) {
 	select {
 	case res := <-in:
 		inv := make(map[string]*DeviceIdList, 1)
@@ -37,10 +37,15 @@ func workerOutput(ctx context.Context, projectId string, rsp chan *Response, in 
 		case <-ctx.Done():
 			break
 		}
+	case <-ctx.Done():
 	}
 }
 
-func (p PushingServerImpl) getProvidersResponders(projectIds []string) map[string]chan *DeviceIdList {
+func (p PushingServerImpl) getProvidersResponders(push *Push) map[string]chan *DeviceIdList {
+	projectIds := make([]string, 0, len(push.GetDestinations()))
+	for projectId := range push.GetDestinations() {
+		projectIds = append(projectIds, projectId)
+	}
 	resps := make(map[string]chan *DeviceIdList, len(p.providers))
 	for _, projectId := range projectIds {
 		if _, ok := p.providers[projectId]; ok {
@@ -50,14 +55,9 @@ func (p PushingServerImpl) getProvidersResponders(projectIds []string) map[strin
 	return resps
 }
 
-func (p PushingServerImpl) startStream(ctx context.Context, requests chan *Push, responses chan *Response) {
-
+func (p PushingServerImpl) startStream(ctx context.Context, requests <-chan *Push, responses chan<- *Response) {
 	for push := range requests {
-		projectIds := make([]string, 0, len(push.GetDestinations()))
-		for projectId := range push.GetDestinations() {
-			projectIds = append(projectIds, projectId)
-		}
-		resps := p.getProvidersResponders(projectIds)
+		resps := p.getProvidersResponders(push)
 		for projectId, out := range resps {
 			go workerOutput(ctx, projectId, responses, out)
 		}
@@ -70,17 +70,23 @@ func (p PushingServerImpl) Ping(ctx context.Context, ping *PingRequest) (*PongRe
 	return &PongResponse{}, nil
 }
 
-func streamOut(stream Pushing_PushStreamServer, responses chan *Response, errch chan error) {
+func streamOut(stream Pushing_PushStreamServer, responses <-chan *Response, errch chan<- error) {
 	log.Infof("Opening stream out")
 	defer func() { log.Infof("Closing stream out") }()
 
-	for resp := range responses {
-		err := stream.Send(resp)
-		if err != nil {
-			errch <- err
-			return
+	for {
+		select {
+		case <-stream.Context().Done():
+			errch <- stream.Context().Err()
+		case resp := <-responses:
+			err := stream.Send(resp)
+			if err != nil {
+				errch <- err
+				return
+			}
 		}
 	}
+
 }
 
 func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan error) {
@@ -104,7 +110,7 @@ func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan e
 }
 
 func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
-	errch := make(chan error)
+	errch := make(chan error, 2)
 	requests := make(chan *Push)
 	responses := make(chan *Response)
 
@@ -128,8 +134,6 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	go streamIn(stream, requests, errch)
 	select {
 	case <-stream.Context().Done():
-		// STOP
-		// CLOSE CHANS
 		return nil
 	case err := <-errch:
 		if err == nil || err == io.EOF {
@@ -171,11 +175,7 @@ func mergeResponses(target, source *Response) {
 }
 
 func (p PushingServerImpl) SinglePush(ctx context.Context, push *Push) (*Response, error) {
-	projectIds := make([]string, 0, len(push.GetDestinations()))
-	for projectId := range push.GetDestinations() {
-		projectIds = append(projectIds, projectId)
-	}
-	responders := p.getProvidersResponders(projectIds)
+	responders := p.getProvidersResponders(push)
 	var wg sync.WaitGroup
 	rsp := &Response{ProjectInvalidations: make(map[string]*DeviceIdList)}
 
