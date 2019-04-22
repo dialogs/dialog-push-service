@@ -89,7 +89,7 @@ func streamOut(stream Pushing_PushStreamServer, responses <-chan *Response, errc
 
 }
 
-func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan error) {
+func streamIn(stream Pushing_PushStreamServer, requests chan<- *Push, errch chan<- error) {
 	log.Infof("Opening stream in")
 	defer func() { log.Infof("Closing stream in") }()
 
