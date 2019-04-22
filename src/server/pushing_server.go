@@ -27,36 +27,40 @@ func peerTypeProtobufToMPS(peerType PeerType) int {
 	}
 }
 
-func workerOutputLoop(projectId string, rsp chan *Response, in chan *DeviceIdList) {
-	log.Info("Opening output loop")
-	for res := range in {
-		// We don't need to send empty pseudo-acks in a stream mode
-		if len(res.DeviceIds) > 0 {
-			inv := make(map[string]*DeviceIdList, 1)
-			inv[projectId] = res
-			log.Infof("send response for projectID %s", projectId)
-			rsp <- &Response{ProjectInvalidations: inv}
-			log.Infof("send response for projectID %s complete", projectId)
+func workerOutput(ctx context.Context, projectId string, rsp chan *Response, in chan *DeviceIdList) {
+	select {
+	case res := <-in:
+		inv := make(map[string]*DeviceIdList, 1)
+		inv[projectId] = res
+		select {
+		case rsp <- &Response{ProjectInvalidations: inv}:
+		case <-ctx.Done():
+			break
 		}
 	}
-	log.Info("Closing output loop")
 }
 
-func (p PushingServerImpl) getProvidersResponders() map[string]chan *DeviceIdList {
+func (p PushingServerImpl) getProvidersResponders(projectIds []string) map[string]chan *DeviceIdList {
 	resps := make(map[string]chan *DeviceIdList, len(p.providers))
-	for projectId := range p.providers {
-		resps[projectId] = make(chan *DeviceIdList, 1)
+	for _, projectId := range projectIds {
+		if _, ok := p.providers[projectId]; ok {
+			resps[projectId] = make(chan *DeviceIdList, 1)
+		}
 	}
 	return resps
 }
 
-func (p PushingServerImpl) startStream(requests chan *Push, responses chan *Response) {
-	resps := p.getProvidersResponders()
-	for projectId, out := range resps {
-		// TODO: make timed output with aggregated results? [groupedWithin]
-		go workerOutputLoop(projectId, responses, out)
-	}
+func (p PushingServerImpl) startStream(ctx context.Context, requests chan *Push, responses chan *Response) {
+
 	for push := range requests {
+		projectIds := make([]string, 0, len(push.GetDestinations()))
+		for projectId := range push.GetDestinations() {
+			projectIds = append(projectIds, projectId)
+		}
+		resps := p.getProvidersResponders(projectIds)
+		for projectId, out := range resps {
+			go workerOutput(ctx, projectId, responses, out)
+		}
 		log.Infof("Incoming streaming request: %s", push.GoString())
 		p.deliverPush(push, resps)
 	}
@@ -87,7 +91,7 @@ func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan e
 		request, err := stream.Recv()
 		if err != nil {
 			errch <- err
-			return
+			break
 		}
 		if request == nil {
 			log.Info("Empty push, skipping")
@@ -95,6 +99,8 @@ func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan e
 		}
 		requests <- request
 	}
+
+	close(requests)
 }
 
 func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
@@ -117,7 +123,7 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	}()
 
 	log.Infof("Starting stream: %s", addrInfo)
-	go p.startStream(requests, responses)
+	go p.startStream(stream.Context(), requests, responses)
 	go streamOut(stream, responses, errch)
 	go streamIn(stream, requests, errch)
 	select {
@@ -165,12 +171,16 @@ func mergeResponses(target, source *Response) {
 }
 
 func (p PushingServerImpl) SinglePush(ctx context.Context, push *Push) (*Response, error) {
-	responders := p.getProvidersResponders()
+	projectIds := make([]string, 0, len(push.GetDestinations()))
+	for projectId := range push.GetDestinations() {
+		projectIds = append(projectIds, projectId)
+	}
+	responders := p.getProvidersResponders(projectIds)
 	var wg sync.WaitGroup
 	rsp := &Response{ProjectInvalidations: make(map[string]*DeviceIdList)}
 
-	mlock := sync.Mutex{}
-	wg.Add(p.deliverPush(push, responders))
+	var mlock sync.Mutex
+	wg.Add(len(responders))
 	for projectId, ch := range responders {
 		go func(pid string, taskChan chan *DeviceIdList) {
 			//log.Infof("Push: %d, chan: %+v", push.Body.Seq, taskChan)
@@ -186,6 +196,8 @@ func (p PushingServerImpl) SinglePush(ctx context.Context, push *Push) (*Respons
 			}
 		}(projectId, ch)
 	}
+
+	p.deliverPush(push, responders)
 
 	wg.Wait()
 	return rsp, nil

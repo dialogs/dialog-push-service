@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -249,7 +250,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 		for _, deviceID := range task.deviceIds {
 			deviceLogger := taskLogger.WithField("deviceId", deviceID)
 			deviceLogger.Info("Sending push")
-			n.DeviceToken = deviceID
+			n.DeviceToken = url.QueryEscape(deviceID)
 			beforeIO := time.Now()
 			resp, err = client.Push(n)
 			afterIO := time.Now()
@@ -276,11 +277,9 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 			}
 		}
 		pm.pushes.Add(float64(len(task.deviceIds)))
-		taskLogger.Infof("send push result for projectID=%s", d.config.ProjectID)
 		//if len(failures) > 0 { // We need to send responses in any case because of rqRp-cycle support
 		task.resp <- &DeviceIdList{DeviceIds: failures}
 		//}
-		taskLogger.Infof("send push result for projectID=%s completed", d.config.ProjectID)
 	}
 }
 

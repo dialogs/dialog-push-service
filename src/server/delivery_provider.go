@@ -41,16 +41,14 @@ func (p PushingServerImpl) deliverPush(push *Push, resps map[string]chan *Device
 			continue
 		}
 		if len(deviceIds) == 0 {
-			log.WithField("correlationId", push.CorrelationId).Infof("Empty deviceIds", push.CorrelationId)
+			log.WithField("correlationId", push.CorrelationId).Infof("Empty deviceIds %s", push.CorrelationId)
 			continue
 		}
 		if len(deviceIds) >= 1000 {
-			log.WithField("correlationId", push.CorrelationId).Warnf("DeviceIds should be at most 999 items long", push.CorrelationId)
+			log.WithField("correlationId", push.CorrelationId).Warnf("DeviceIds should be at most 999 items long %s", push.CorrelationId)
 			continue
 		}
-		log.Infof("send push task to provider with projectID %s", projectId)
 		provider.getTasksChan() <- PushTask{deviceIds: deviceIds, body: push.GetBody(), resp: resps[projectId], correlationId: push.CorrelationId}
-		log.Infof("send push task to provider with projectID %s complete", projectId)
 		tasks++
 	}
 	return tasks
