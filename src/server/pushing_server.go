@@ -30,13 +30,17 @@ func peerTypeProtobufToMPS(peerType PeerType) int {
 func workerOutput(ctx context.Context, projectId string, rsp chan<- *Response, in <-chan *DeviceIdList) {
 	select {
 	case res := <-in:
-		inv := make(map[string]*DeviceIdList, 1)
-		inv[projectId] = res
-		select {
-		case rsp <- &Response{ProjectInvalidations: inv}:
-		case <-ctx.Done():
-			break
+		if len(res.GetDeviceIds()) > 0 {
+			inv := make(map[string]*DeviceIdList, 1)
+			inv[projectId] = res
+
+			select {
+			case rsp <- &Response{ProjectInvalidations: inv}:
+			case <-ctx.Done():
+				break
+			}
 		}
+
 	case <-ctx.Done():
 	}
 }
