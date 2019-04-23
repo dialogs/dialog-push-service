@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -243,7 +244,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 		for _, deviceID := range task.deviceIds {
 			deviceLogger := taskLogger.WithField("deviceId", deviceID)
 			deviceLogger.Info("Sending push")
-			n.DeviceToken = deviceID
+			n.DeviceToken = url.QueryEscape(deviceID)
 			beforeIO := time.Now()
 			resp, err = client.Push(n)
 			afterIO := time.Now()
