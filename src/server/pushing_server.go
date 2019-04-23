@@ -89,6 +89,7 @@ func streamOut(stream Pushing_PushStreamServer, responses <-chan *Response, errc
 		select {
 		case <-stream.Context().Done():
 			errch <- stream.Context().Err()
+			return
 		case resp := <-responses:
 			err := stream.Send(resp)
 			if err != nil {
@@ -143,9 +144,8 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	go p.startStream(stream.Context(), requests, responses)
 	go streamOut(stream, responses, errch)
 	go streamIn(stream, requests, errch)
+
 	select {
-	case <-stream.Context().Done():
-		return nil
 	case err := <-errch:
 		if err == nil || err == io.EOF {
 			log.Infof("Stream completed normally: %s", addrInfo)
@@ -154,6 +154,7 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 		}
 		return err
 	}
+
 }
 
 type empty struct{}
