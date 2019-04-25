@@ -1,17 +1,17 @@
 package main
 
 import (
-	"io"
-	"sync"
-
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/peer"
+	"io"
 
 	"golang.org/x/net/context"
 )
 
 type PushingServerImpl struct {
-	providers map[string]DeliveryProvider
+	providers      map[string]DeliveryProvider
+	readQueueSize  int
+	writeQueueSize int
 }
 
 func peerTypeProtobufToMPS(peerType PeerType) int {
@@ -27,51 +27,34 @@ func peerTypeProtobufToMPS(peerType PeerType) int {
 	}
 }
 
-func workerOutputLoop(projectId string, rsp chan *Response, in chan *DeviceIdList) {
-	log.Info("Opening output loop")
-	for res := range in {
-		// We don't need to send empty pseudo-acks in a stream mode
-		if len(res.DeviceIds) > 0 {
-			inv := make(map[string]*DeviceIdList, 1)
-			inv[projectId] = res
-			rsp <- &Response{ProjectInvalidations: inv}
-		}
-	}
-	log.Info("Closing output loop")
-}
-
-func (p PushingServerImpl) getProvidersResponders() map[string]chan *DeviceIdList {
-	resps := make(map[string]chan *DeviceIdList, len(p.providers))
-	for projectId := range p.providers {
-		resps[projectId] = make(chan *DeviceIdList, 1)
-	}
-	return resps
-}
-
-func (p PushingServerImpl) startStream(requests chan *Push, responses chan *Response) {
-	resps := p.getProvidersResponders()
-	for projectId, out := range resps {
-		// TODO: make timed output with aggregated results? [groupedWithin]
-		go workerOutputLoop(projectId, responses, out)
-	}
+func (p *PushingServerImpl) startStream(ctx context.Context, requests chan *Push, responses chan<- *PushResult) {
+	responder := NewStreamResponder(ctx, responses)
 	for push := range requests {
 		log.Infof("Incoming streaming request: %s", push.GoString())
-		p.deliverPush(push, resps)
+		p.deliverPush(push, responder)
 	}
 }
 
-func (p PushingServerImpl) Ping(ctx context.Context, ping *PingRequest) (*PongResponse, error) {
+func (p *PushingServerImpl) Ping(ctx context.Context, ping *PingRequest) (*PongResponse, error) {
 	return &PongResponse{}, nil
 }
 
-func streamOut(stream Pushing_PushStreamServer, responses chan *Response, errch chan error) {
+func streamOut(stream Pushing_PushStreamServer, responses chan *PushResult, errch chan error) {
 	log.Infof("Opening stream out")
 	defer func() { log.Infof("Closing stream out") }()
 
-	for resp := range responses {
-		err := stream.Send(resp)
-		if err != nil {
-			errch <- err
+	for {
+		select {
+		case res := <-responses:
+			response := &Response{
+				ProjectInvalidations: map[string]*DeviceIdList{res.ProjectId: res.Failures},
+			}
+			err := stream.Send(response)
+			if err != nil {
+				errch <- err
+				return
+			}
+		case <-stream.Context().Done():
 			return
 		}
 	}
@@ -85,20 +68,23 @@ func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan e
 		request, err := stream.Recv()
 		if err != nil {
 			errch <- err
-			return
+			break
 		}
 		if request == nil {
 			log.Info("Empty push, skipping")
 			continue
 		}
+		log.Infof("Incoming push request: %s", request.GoString())
 		requests <- request
 	}
+
+	close(requests)
 }
 
-func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
-	errch := make(chan error)
-	requests := make(chan *Push)
-	responses := make(chan *Response)
+func (p *PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
+	errch := make(chan error, 2)
+	requests := make(chan *Push, p.readQueueSize)
+	responses := make(chan *PushResult, p.writeQueueSize)
 
 	var addrInfo string
 	peer, peerOk := peer.FromContext(stream.Context())
@@ -115,7 +101,7 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	}()
 
 	log.Infof("Starting stream: %s", addrInfo)
-	go p.startStream(requests, responses)
+	go p.startStream(stream.Context(), requests, responses)
 	go streamOut(stream, responses, errch)
 	go streamIn(stream, requests, errch)
 
@@ -157,30 +143,24 @@ func mergeResponses(target, source *Response) {
 	}
 }
 
-func (p PushingServerImpl) SinglePush(ctx context.Context, push *Push) (*Response, error) {
-	responders := p.getProvidersResponders()
-	var wg sync.WaitGroup
+func (p *PushingServerImpl) SinglePush(ctx context.Context, push *Push) (*Response, error) {
 	rsp := &Response{ProjectInvalidations: make(map[string]*DeviceIdList)}
+	response := make(chan *PushResult, p.writeQueueSize)
+	responder := NewUnaryResponder(response)
 
-	mlock := sync.Mutex{}
-	wg.Add(p.deliverPush(push, responders))
-	for projectId, ch := range responders {
-		go func(pid string, taskChan chan *DeviceIdList) {
-			//log.Infof("Push: %d, chan: %+v", push.Body.Seq, taskChan)
-			invalidations := <-taskChan
-			if invalidations != nil {
-				mlock.Lock()
-				rsp.ProjectInvalidations[pid] = invalidations
-				mlock.Unlock()
-				if len(invalidations.DeviceIds) > 0 {
-					log.Infof("Invalidations for push with id = `%s` for projectId = `%s` is `%s`", push.CorrelationId, pid, invalidations)
-				}
-				wg.Done()
+	taskCount := p.deliverPush(push, responder)
+
+	for i := 0; i < taskCount; i++ {
+		select {
+		case res := <-response:
+			rsp.ProjectInvalidations[res.ProjectId] = res.Failures
+
+			if len(res.Failures.DeviceIds) > 0 {
+				log.Infof("Invalidations for push with id = `%s` for projectId = `%s` is `%s`", push.CorrelationId, res.ProjectId, res.Failures)
 			}
-		}(projectId, ch)
+		}
 	}
 
-	wg.Wait()
 	return rsp, nil
 }
 
@@ -191,7 +171,11 @@ func ensureProjectIdUniqueness(projectId string, providers map[string]DeliveryPr
 
 func newPushingServer(config *serverConfig) PushingServer {
 	m := newMetricsCollector()
-	p := PushingServerImpl{providers: make(map[string]DeliveryProvider)}
+	p := &PushingServerImpl{
+		providers:      make(map[string]DeliveryProvider),
+		readQueueSize:  config.ReadQueueSize,
+		writeQueueSize: config.WriteQueueSize,
+	}
 	for _, c := range config.getProviderConfigs() {
 		if !ensureProjectIdUniqueness(c.getProjectID(), p.providers) {
 			log.Fatalf("Duplicate project id: %s", c.getProjectID())

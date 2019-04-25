@@ -90,7 +90,7 @@ func loadCertificate(filename string) (cert tls.Certificate, err error) {
 		}
 	}
 	if cert.PrivateKey == nil {
-		err = fmt.Errorf("Private key was not extracted from %s", filename)
+		err = fmt.Errorf("private key was not extracted from %s", filename)
 		return
 	}
 	return
@@ -231,11 +231,13 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 	for task = range d.getTasksChan() {
 		taskLogger := workerLogger.WithField("correlationId", task.correlationId)
 		// TODO: avoid allocation here, reuse payload across requests
-		n := &apns.Notification{}
+
 		payload = d.getPayload(task, taskLogger)
 		if payload == nil {
+			task.responder.Send(d.config.ProjectID, &DeviceIdList{})
 			continue
 		}
+		n := &apns.Notification{}
 		taskLogger.Infof("Push transformation: `%s` to `%+v`", task.body.GoString(), payload)
 		/*
 			if task.body.TimeToLive > 0 {
@@ -278,7 +280,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 		}
 		pm.pushes.Add(float64(len(task.deviceIds)))
 		//if len(failures) > 0 { // We need to send responses in any case because of rqRp-cycle support
-		task.resp <- &DeviceIdList{DeviceIds: failures}
+		task.responder.Send(d.config.ProjectID, &DeviceIdList{DeviceIds: failures})
 		//}
 	}
 }

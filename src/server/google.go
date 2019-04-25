@@ -137,6 +137,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		taskLogger := workerLogger.WithField("id", task.correlationId)
 		resetFcmMessage(msg)
 		if !d.populateFcmMessage(msg, task, taskLogger) {
+			task.responder.Send(d.config.ProjectID, &DeviceIdList{})
 			continue
 		}
 		msg.RegistrationIDs = task.deviceIds
@@ -148,6 +149,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 			taskLogger.Errorf("FCM response error: %s", err.Error())
 			raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
 			pm.fails.Inc()
+			task.responder.Send(d.config.ProjectID, &DeviceIdList{})
 			continue
 		} else {
 			pm.success.Inc()
@@ -172,7 +174,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		} else {
 			taskLogger.Info("Sucessfully sent")
 		}
-		task.resp <- &DeviceIdList{DeviceIds: failures}
+		task.responder.Send(d.config.ProjectID, &DeviceIdList{DeviceIds: failures})
 	}
 }
 
