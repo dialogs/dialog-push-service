@@ -118,19 +118,14 @@ func (p PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	go p.startStream(requests, responses)
 	go streamOut(stream, responses, errch)
 	go streamIn(stream, requests, errch)
-	select {
-	case <-stream.Context().Done():
-		// STOP
-		// CLOSE CHANS
-		return nil
-	case err := <-errch:
-		if err == nil || err == io.EOF {
-			log.Infof("Stream completed normally: %s", addrInfo)
-		} else {
-			log.Errorf("Stopping stream %s due to error: %s", addrInfo, err.Error())
-		}
-		return err
+
+	err := <-errch
+	if err == nil || err == io.EOF {
+		log.Infof("Stream completed normally: %s", addrInfo)
+	} else {
+		log.Errorf("Stopping stream %s due to error: %s", addrInfo, err.Error())
 	}
+	return err
 }
 
 type empty struct{}
