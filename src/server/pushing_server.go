@@ -9,9 +9,10 @@ import (
 )
 
 type PushingServerImpl struct {
-	providers      map[string]DeliveryProvider
-	readQueueSize  int
-	writeQueueSize int
+	metricsCollector *metricsCollector
+	providers        map[string]DeliveryProvider
+	readQueueSize    int
+	writeQueueSize   int
 }
 
 func peerTypeProtobufToMPS(peerType PeerType) int {
@@ -60,7 +61,7 @@ func streamOut(stream Pushing_PushStreamServer, responses <-chan *PushResult, er
 	}
 }
 
-func streamIn(stream Pushing_PushStreamServer, requests chan<- *Push, errch chan<- error) {
+func streamIn(pm *peerMetrics, stream Pushing_PushStreamServer, requests chan<- *Push, errch chan<- error) {
 	log.Infof("Opening stream in")
 	defer func() { log.Infof("Closing stream in") }()
 
@@ -74,6 +75,7 @@ func streamIn(stream Pushing_PushStreamServer, requests chan<- *Push, errch chan
 			log.Info("Empty push, skipping")
 			continue
 		}
+		pm.pushRecv.Inc()
 		log.Infof("Incoming push request: %s", request.GoString())
 		requests <- request
 	}
@@ -81,18 +83,26 @@ func streamIn(stream Pushing_PushStreamServer, requests chan<- *Push, errch chan
 	close(requests)
 }
 
+func (p *PushingServerImpl) getAddrInfo(ctx context.Context) string {
+	peer, peerOk := peer.FromContext(ctx)
+	if peerOk {
+		return peer.Addr.String()
+	}
+
+	return "unknown address"
+}
+
 func (p *PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	errch := make(chan error, 2)
 	requests := make(chan *Push, p.readQueueSize)
 	responses := make(chan *PushResult, p.writeQueueSize)
 
-	var addrInfo string
-	peer, peerOk := peer.FromContext(stream.Context())
-	if peerOk {
-		addrInfo = peer.Addr.String()
-	} else {
-		addrInfo = "unknown address"
+	addrInfo := p.getAddrInfo(stream.Context())
+	pm, err := p.metricsCollector.getMetricsForPeer(addrInfo)
+	if err != nil {
+		return err
 	}
+
 	defer func() {
 		// close(requests)
 		// close(responses)
@@ -103,9 +113,9 @@ func (p *PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	log.Infof("Starting stream: %s", addrInfo)
 	go p.startStream(stream.Context(), requests, responses)
 	go streamOut(stream, responses, errch)
-	go streamIn(stream, requests, errch)
+	go streamIn(pm, stream, requests, errch)
 
-	err := <-errch
+	err = <-errch
 	if err == nil || err == io.EOF {
 		log.Infof("Stream completed normally: %s", addrInfo)
 	} else {
@@ -144,6 +154,13 @@ func mergeResponses(target, source *Response) {
 }
 
 func (p *PushingServerImpl) SinglePush(ctx context.Context, push *Push) (*Response, error) {
+	addrInfo := p.getAddrInfo(ctx)
+	pm, err := p.metricsCollector.getMetricsForPeer(addrInfo)
+	if err != nil {
+		return nil, err
+	}
+	pm.pushRecv.Inc()
+
 	rsp := &Response{ProjectInvalidations: make(map[string]*DeviceIdList)}
 	response := make(chan *PushResult, p.writeQueueSize)
 	responder := NewUnaryResponder(ctx, response)
@@ -174,9 +191,10 @@ func ensureProjectIdUniqueness(projectId string, providers map[string]DeliveryPr
 func newPushingServer(config *serverConfig) PushingServer {
 	m := newMetricsCollector()
 	p := &PushingServerImpl{
-		providers:      make(map[string]DeliveryProvider),
-		readQueueSize:  config.ReadQueueSize,
-		writeQueueSize: config.WriteQueueSize,
+		metricsCollector: m,
+		providers:        make(map[string]DeliveryProvider),
+		readQueueSize:    config.ReadQueueSize,
+		writeQueueSize:   config.WriteQueueSize,
 	}
 	for _, c := range config.getProviderConfigs() {
 		if !ensureProjectIdUniqueness(c.getProjectID(), p.providers) {
