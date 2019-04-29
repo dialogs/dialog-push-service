@@ -256,13 +256,13 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 			beforeIO := time.Now()
 			resp, err = client.Push(n)
 			afterIO := time.Now()
+			pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 			if err != nil {
 				deviceLogger.Errorf("APNS send error %s", err.Error())
 				raven.CaptureError(err, map[string]string{"deviceId": deviceID, "projectId": d.config.ProjectID})
-				//metrics.fails.
+				pm.fails.Inc()
 				continue
 			} else {
-				pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 				pm.success.Inc()
 			}
 			if !resp.Sent() {

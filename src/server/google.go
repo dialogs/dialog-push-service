@@ -143,8 +143,9 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		msg.RegistrationIDs = task.deviceIds
 		taskLogger.Infof("Sending push")
 		beforeIO := time.Now()
-		resp, err = client.SendWithRetry(msg, int(d.config.Retries))
+		resp, err = client.Send(msg)
 		afterIO := time.Now()
+		pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 		if err != nil {
 			taskLogger.Errorf("FCM response error: %s", err.Error())
 			raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
@@ -153,7 +154,6 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 			continue
 		} else {
 			pm.success.Inc()
-			pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 			pm.pushes.Add(float64(len(task.deviceIds)))
 		}
 		failures := make([]string, 0, len(task.deviceIds))

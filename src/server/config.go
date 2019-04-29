@@ -29,7 +29,6 @@ type apnsConfig struct {
 type googleConfig struct {
 	ProjectID   string `mapstructure:"project-id"`
 	Key         string
-	Retries     uint8
 	AllowAlerts bool `mapstructure:"allow-alerts"`
 	sandboxing  `mapstructure:",squash"`
 	workersPool `mapstructure:",squash"`
