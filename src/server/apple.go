@@ -278,7 +278,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 					raven.CaptureMessage(s, map[string]string{"deviceId": deviceID, "projectId": d.config.ProjectID})
 				}
 			} else {
-				deviceLogger.Info("Sucessfully sent")
+				deviceLogger.Info("Successfully sent")
 			}
 		}
 		pm.pushes.Add(float64(len(task.deviceIds)))
