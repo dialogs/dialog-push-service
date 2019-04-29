@@ -61,7 +61,7 @@ func streamOut(stream Pushing_PushStreamServer, responses <-chan *PushResult, er
 	}
 }
 
-func streamIn(pm *peerMetrics, stream Pushing_PushStreamServer, requests chan<- *Push, errch chan<- error) {
+func streamIn(stream Pushing_PushStreamServer, requests chan<- *Push, errch chan<- error, pm *peerMetrics) {
 	log.Infof("Opening stream in")
 	defer func() { log.Infof("Closing stream in") }()
 
@@ -113,7 +113,7 @@ func (p *PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	log.Infof("Starting stream: %s", addrInfo)
 	go p.startStream(stream.Context(), requests, responses)
 	go streamOut(stream, responses, errch)
-	go streamIn(pm, stream, requests, errch)
+	go streamIn(stream, requests, errch, pm)
 
 	err = <-errch
 	if err == nil || err == io.EOF {
