@@ -164,12 +164,12 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		}
 		failures := make([]string, 0, len(task.deviceIds))
 		if resp.Failure > 0 {
-			for k, r := range resp.Results {
+			for _, r := range resp.Results {
 				if r.Error != nil {
 					if d.shouldInvalidate(r.Error.Error()) {
-						failures = append(failures, task.deviceIds[k])
+						failures = append(failures, r.RegistrationID)
 					} else {
-						taskLogger.Errorf("FCM response error for deviceId = %+v: %v", task.deviceIds[k], err)
+						taskLogger.Errorf("FCM response error for deviceId = %+v: %v", r.RegistrationID, err)
 					}
 				}
 			}
