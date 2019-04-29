@@ -39,7 +39,7 @@ func (p *PushingServerImpl) Ping(ctx context.Context, ping *PingRequest) (*PongR
 	return &PongResponse{}, nil
 }
 
-func streamOut(stream Pushing_PushStreamServer, responses chan *PushResult, errch chan error) {
+func streamOut(stream Pushing_PushStreamServer, responses <-chan *PushResult, errch chan<- error) {
 	log.Infof("Opening stream out")
 	defer func() { log.Infof("Closing stream out") }()
 
@@ -60,7 +60,7 @@ func streamOut(stream Pushing_PushStreamServer, responses chan *PushResult, errc
 	}
 }
 
-func streamIn(stream Pushing_PushStreamServer, requests chan *Push, errch chan error) {
+func streamIn(stream Pushing_PushStreamServer, requests chan<- *Push, errch chan<- error) {
 	log.Infof("Opening stream in")
 	defer func() { log.Infof("Closing stream in") }()
 
@@ -146,12 +146,14 @@ func mergeResponses(target, source *Response) {
 func (p *PushingServerImpl) SinglePush(ctx context.Context, push *Push) (*Response, error) {
 	rsp := &Response{ProjectInvalidations: make(map[string]*DeviceIdList)}
 	response := make(chan *PushResult, p.writeQueueSize)
-	responder := NewUnaryResponder(response)
+	responder := NewUnaryResponder(ctx, response)
 
 	taskCount := p.deliverPush(push, responder)
 
 	for i := 0; i < taskCount; i++ {
 		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
 		case res := <-response:
 			rsp.ProjectInvalidations[res.ProjectId] = res.Failures
 

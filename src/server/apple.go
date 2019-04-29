@@ -234,7 +234,10 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 
 		payload = d.getPayload(task, taskLogger)
 		if payload == nil {
-			task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			err = task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			if err != nil {
+				taskLogger.Errorf("send response from provider failed: %v", err)
+			}
 			continue
 		}
 		n := &apns.Notification{}
@@ -280,7 +283,10 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 		}
 		pm.pushes.Add(float64(len(task.deviceIds)))
 		//if len(failures) > 0 { // We need to send responses in any case because of rqRp-cycle support
-		task.responder.Send(d.config.ProjectID, &DeviceIdList{DeviceIds: failures})
+		err = task.responder.Send(d.config.ProjectID, &DeviceIdList{DeviceIds: failures})
+		if err != nil {
+			taskLogger.Errorf("send response from provider failed: %v", err)
+		}
 		//}
 	}
 }

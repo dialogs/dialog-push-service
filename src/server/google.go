@@ -137,7 +137,10 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		taskLogger := workerLogger.WithField("id", task.correlationId)
 		resetFcmMessage(msg)
 		if !d.populateFcmMessage(msg, task, taskLogger) {
-			task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			err = task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			if err != nil {
+				taskLogger.Errorf("send response from provider failed: %v", err)
+			}
 			continue
 		}
 		msg.RegistrationIDs = task.deviceIds
@@ -150,7 +153,10 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 			taskLogger.Errorf("FCM response error: %s", err.Error())
 			raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
 			pm.fails.Inc()
-			task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			err = task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			if err != nil {
+				taskLogger.Errorf("send response from provider failed: %v", err)
+			}
 			continue
 		} else {
 			pm.success.Inc()
@@ -172,9 +178,12 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 			// 	task.resp <- failures
 			// }
 		} else {
-			taskLogger.Info("Sucessfully sent")
+			taskLogger.Info("Successfully sent")
 		}
-		task.responder.Send(d.config.ProjectID, &DeviceIdList{DeviceIds: failures})
+		err = task.responder.Send(d.config.ProjectID, &DeviceIdList{DeviceIds: failures})
+		if err != nil {
+			taskLogger.Errorf("send response from provider failed: %v", err)
+		}
 	}
 }
 
