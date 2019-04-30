@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -89,7 +90,7 @@ func loadCertificate(filename string) (cert tls.Certificate, err error) {
 		}
 	}
 	if cert.PrivateKey == nil {
-		err = fmt.Errorf("Private key was not extracted from %s", filename)
+		err = fmt.Errorf("private key was not extracted from %s", filename)
 		return
 	}
 	return
@@ -230,11 +231,16 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 	for task = range d.getTasksChan() {
 		taskLogger := workerLogger.WithField("correlationId", task.correlationId)
 		// TODO: avoid allocation here, reuse payload across requests
-		n := &apns.Notification{}
+
 		payload = d.getPayload(task, taskLogger)
 		if payload == nil {
+			err = task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			if err != nil {
+				taskLogger.Errorf("send response from provider failed: %v", err)
+			}
 			continue
 		}
+		n := &apns.Notification{}
 		taskLogger.Infof("Push transformation: `%s` to `%+v`", task.body.GoString(), payload)
 		/*
 			if task.body.TimeToLive > 0 {
@@ -249,17 +255,17 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 		for _, deviceID := range task.deviceIds {
 			deviceLogger := taskLogger.WithField("deviceId", deviceID)
 			deviceLogger.Info("Sending push")
-			n.DeviceToken = deviceID
+			n.DeviceToken = url.QueryEscape(deviceID)
 			beforeIO := time.Now()
 			resp, err = client.Push(n)
 			afterIO := time.Now()
+			pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 			if err != nil {
 				deviceLogger.Errorf("APNS send error %s", err.Error())
 				raven.CaptureError(err, map[string]string{"deviceId": deviceID, "projectId": d.config.ProjectID})
-				//metrics.fails.
+				pm.fails.Inc()
 				continue
 			} else {
-				pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 				pm.success.Inc()
 			}
 			if !resp.Sent() {
@@ -272,12 +278,15 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 					raven.CaptureMessage(s, map[string]string{"deviceId": deviceID, "projectId": d.config.ProjectID})
 				}
 			} else {
-				deviceLogger.Info("Sucessfully sent")
+				deviceLogger.Info("Successfully sent")
 			}
 		}
 		pm.pushes.Add(float64(len(task.deviceIds)))
 		//if len(failures) > 0 { // We need to send responses in any case because of rqRp-cycle support
-		task.resp <- &DeviceIdList{DeviceIds: failures}
+		err = task.responder.Send(d.config.ProjectID, &DeviceIdList{DeviceIds: failures})
+		if err != nil {
+			taskLogger.Errorf("send response from provider failed: %v", err)
+		}
 		//}
 	}
 }
