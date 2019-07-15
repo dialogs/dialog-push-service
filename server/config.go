@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"errors"
@@ -29,7 +29,6 @@ type apnsConfig struct {
 type googleConfig struct {
 	ProjectID   string `mapstructure:"project-id"`
 	Key         string
-	Retries     uint8
 	AllowAlerts bool `mapstructure:"allow-alerts"`
 	sandboxing  `mapstructure:",squash"`
 	workersPool `mapstructure:",squash"`
@@ -97,12 +96,13 @@ func (n noopConfig) checkConfig() (err error) {
 }
 
 type serverConfig struct {
-	Google   []googleConfig
-	Apple    []apnsConfig
-	Noop     []noopConfig
-	GrpcPort uint16 `mapstructure:"grpc-port"`
-	HTTPPort uint16 `mapstructure:"http-port"`
-	RavenDsn string `mapstructure:"raven-dsn"`
+	Google         []googleConfig
+	Apple          []apnsConfig
+	Noop           []noopConfig
+	GrpcPort       uint16 `mapstructure:"grpc-port"`
+	HTTPPort       uint16 `mapstructure:"http-port"`
+	ReadQueueSize  int    `mapstructure:"read-queue-size"`
+	WriteQueueSize int    `mapstructure:"write-queue-size"`
 }
 
 func (c *serverConfig) getProviderConfigs() []providerConstructor {

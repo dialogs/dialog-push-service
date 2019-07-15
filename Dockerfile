@@ -1,13 +1,11 @@
-FROM golang:latest
+FROM golang:1.11
 
-ADD src/server /go/src/server
-WORKDIR /go/src/server
+ADD . /go/src/dialog-push-service
+WORKDIR /go/src/dialog-push-service
 
-RUN go get -u github.com/golang/dep/cmd/dep
-RUN dep ensure
-RUN go build
+ENV GO111MODULE=on
 RUN go install
 RUN ls -la /go/bin
-RUN ls -la /go/src/server
+RUN ls -la /go/src/dialog-push-service
 
-ENTRYPOINT ["/go/bin/server"]
+ENTRYPOINT ["/go/bin/dialog-push-service"]

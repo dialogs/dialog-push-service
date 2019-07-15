@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -21,15 +21,15 @@ func TestServer(t *testing.T) {
 	noopCfg2 := noopConfig{ProjectID: "test2", OnSend: onSend2}
 	noopCfg2.Workers = 2
 
-	testConfig := &serverConfig{Noop: []noopConfig{noopCfg1, noopCfg2}}
+	testConfig := &serverConfig{Noop: []noopConfig{noopCfg1, noopCfg2}, ReadQueueSize: 2, WriteQueueSize: 2}
 	server := newPushingServer(testConfig)
 	g := Goblin(t)
 	g.Describe("Server", func() {
 		g.It("Should send single pushes", func(done Done) {
 			push := &Push{
 				Destinations: map[string]*DeviceIdList{
-					"test1": &DeviceIdList{DeviceIds: []string{"a", "b", "c", "d", "e"}},
-					"test2": &DeviceIdList{DeviceIds: []string{"f", "g"}},
+					"test1": {DeviceIds: []string{"a", "b", "c", "d", "e"}},
+					"test2": {DeviceIds: []string{"f", "g"}},
 				},
 				CorrelationId: "test",
 				Body:          &PushBody{CollapseKey: "ckey", Seq: 1},

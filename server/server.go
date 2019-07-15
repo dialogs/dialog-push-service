@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -7,9 +7,8 @@ import (
 	_ "net/http/pprof"
 	"os"
 
-	raven "github.com/getsentry/raven-go"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	"github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jessevdk/go-flags"
 	"github.com/prometheus/client_golang/prometheus"
@@ -54,7 +53,6 @@ func StartServer() {
 	if err != nil {
 		log.Fatalf("Failed to start gRPC server: %s", err.Error())
 	}
-	raven.SetDSN(config.RavenDsn)
 	http.Handle("/metrics", prometheus.Handler())
 	go func() {
 		log.Infof("Started HTTP server at %d", config.HTTPPort)

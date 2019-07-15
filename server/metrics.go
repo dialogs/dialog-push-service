@@ -1,4 +1,4 @@
-package main
+package server
 
 import "github.com/prometheus/client_golang/prometheus"
 
@@ -7,6 +7,8 @@ type metricsCollector struct {
 	fails   *prometheus.CounterVec
 	pushes  *prometheus.CounterVec
 	io      *prometheus.HistogramVec
+
+	pushesRecv *prometheus.CounterVec
 }
 
 type providerMetrics struct {
@@ -14,6 +16,10 @@ type providerMetrics struct {
 	fails   prometheus.Counter
 	pushes  prometheus.Counter
 	io      prometheus.Histogram
+}
+
+type peerMetrics struct {
+	pushRecv prometheus.Counter
 }
 
 func (m *metricsCollector) getMetricsForProvider(kind, projectId string) (pm *providerMetrics, err error) {
@@ -32,6 +38,15 @@ func (m *metricsCollector) getMetricsForProvider(kind, projectId string) (pm *pr
 	}
 	pm.io, err = m.io.GetMetricWith(prometheus.Labels{"kind": kind})
 	return
+}
+
+func (m *metricsCollector) getMetricsForPeer(addr string) (*peerMetrics, error) {
+	pushRecv, err := m.pushesRecv.GetMetricWith(prometheus.Labels{"addr": addr})
+	if err != nil {
+		return nil, err
+	}
+
+	return &peerMetrics{pushRecv: pushRecv}, nil
 }
 
 func newMetricsCollector() *metricsCollector {
@@ -56,6 +71,13 @@ func newMetricsCollector() *metricsCollector {
 		Name:      "io",
 		Help:      "Time spent in I/O with service provider (in nanoseconds)"},
 		[]string{"kind"})
+
+	metrics.pushesRecv = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "push",
+		Name:      "pushes_recv",
+		Help:      "Pushes recv"},
+		[]string{"addr"})
+
 	prometheus.MustRegister(metrics.success, metrics.fails, metrics.pushes, metrics.io)
 	return metrics
 }

@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/base64"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/edganiukov/fcm"
-	raven "github.com/getsentry/raven-go"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -129,7 +128,6 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 	workerLogger := log.NewEntry(log.StandardLogger()).WithField("worker", workerName)
 	if err != nil {
 		workerLogger.Errorf("Error in spawning FCM worker: %s", err.Error())
-		raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
 		return
 	}
 	workerLogger.Info("Started FCM worker")
@@ -137,31 +135,38 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		taskLogger := workerLogger.WithField("id", task.correlationId)
 		resetFcmMessage(msg)
 		if !d.populateFcmMessage(msg, task, taskLogger) {
+			err = task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			if err != nil {
+				taskLogger.Errorf("send response from provider failed: %v", err)
+			}
 			continue
 		}
 		msg.RegistrationIDs = task.deviceIds
 		taskLogger.Infof("Sending push")
 		beforeIO := time.Now()
-		resp, err = client.SendWithRetry(msg, int(d.config.Retries))
+		resp, err = client.Send(msg)
 		afterIO := time.Now()
+		pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 		if err != nil {
 			taskLogger.Errorf("FCM response error: %s", err.Error())
-			raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
 			pm.fails.Inc()
+			err = task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			if err != nil {
+				taskLogger.Errorf("send response from provider failed: %v", err)
+			}
 			continue
 		} else {
 			pm.success.Inc()
-			pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 			pm.pushes.Add(float64(len(task.deviceIds)))
 		}
 		failures := make([]string, 0, len(task.deviceIds))
 		if resp.Failure > 0 {
-			for k, r := range resp.Results {
+			for _, r := range resp.Results {
 				if r.Error != nil {
 					if d.shouldInvalidate(r.Error.Error()) {
-						failures = append(failures, task.deviceIds[k])
+						failures = append(failures, r.RegistrationID)
 					} else {
-						taskLogger.Errorf("FCM response error for deviceId = %+v: %v", task.deviceIds[k], err)
+						taskLogger.Errorf("FCM response error for deviceId = %+v: %v", r.RegistrationID, err)
 					}
 				}
 			}
@@ -170,9 +175,12 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 			// 	task.resp <- failures
 			// }
 		} else {
-			taskLogger.Info("Sucessfully sent")
+			taskLogger.Info("Successfully sent")
 		}
-		task.resp <- &DeviceIdList{DeviceIds: failures}
+		err = task.responder.Send(d.config.ProjectID, &DeviceIdList{DeviceIds: failures})
+		if err != nil {
+			taskLogger.Errorf("send response from provider failed: %v", err)
+		}
 	}
 }
 

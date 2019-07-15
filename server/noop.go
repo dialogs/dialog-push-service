@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"math/rand"
@@ -37,7 +37,7 @@ func (ndp NoopDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		if ndp.config.OnSend != nil {
 			ndp.config.OnSend(task)
 		}
-		go func() { task.resp <- &DeviceIdList{} }()
+		go func() { task.responder.Send(ndp.config.ProjectID, &DeviceIdList{}) }()
 		<-time.After(time.Duration(delay) * time.Microsecond)
 	}
 }
