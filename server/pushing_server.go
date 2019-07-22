@@ -1,9 +1,10 @@
 package server
 
 import (
+	"io"
+
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/peer"
-	"io"
 
 	"golang.org/x/net/context"
 )
@@ -122,35 +123,6 @@ func (p *PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 		log.Errorf("Stopping stream %s due to error: %s", addrInfo, err.Error())
 	}
 	return err
-}
-
-type empty struct{}
-
-func mergeDeviceLists(target *DeviceIdList, source *DeviceIdList) *DeviceIdList {
-	set := make(map[string]empty)
-	for _, n := range target.DeviceIds {
-		set[n] = empty{}
-	}
-	for _, n := range source.DeviceIds {
-		set[n] = empty{}
-	}
-
-	result := &DeviceIdList{DeviceIds: make([]string, 0, len(set))}
-	for k, _ := range set {
-		result.DeviceIds = append(result.DeviceIds, k)
-	}
-	return result
-}
-
-func mergeResponses(target, source *Response) {
-	for k, v := range source.ProjectInvalidations {
-		found, exists := target.ProjectInvalidations[k]
-		if exists {
-			target.ProjectInvalidations[k] = mergeDeviceLists(found, v)
-		} else {
-			target.ProjectInvalidations[k] = v
-		}
-	}
 }
 
 func (p *PushingServerImpl) SinglePush(ctx context.Context, push *Push) (*Response, error) {

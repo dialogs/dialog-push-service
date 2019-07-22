@@ -1,11 +1,22 @@
-FROM golang:1.11
+FROM golang:1.12 as builder
 
-ADD . /go/src/dialog-push-service
-WORKDIR /go/src/dialog-push-service
+WORKDIR $GOPATH/src/github.com/dialogs/dialog-push-service
 
-ENV GO111MODULE=on
-RUN go install
-RUN ls -la /go/bin
-RUN ls -la /go/src/dialog-push-service
+ADD server server
+ADD main.go main.go
+ADD go.mod go.mod
+ADD go.sum go.sum
 
-ENTRYPOINT ["/go/bin/dialog-push-service"]
+RUN GO111MODULE=on \
+    CGO_ENABLED=1 \
+    GOOS=linux \
+    GOARCH=amd64 \
+    go build -ldflags="-w -s" -o /dialog-push-service main.go
+
+FROM debian:stretch-slim
+
+WORKDIR /
+
+COPY --from=builder /dialog-push-service /dialog-push-service
+
+CMD ["/dialog-push-service"]

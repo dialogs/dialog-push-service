@@ -4,6 +4,10 @@ package main;
 option go_package = "server";
 
 import "google/protobuf/wrappers.proto";
+import "scalapb/scalapb.proto";
+option (scalapb.options) = {
+    package_name: "im.dlg.push.service";
+};
 
 message SilentPush {}
 

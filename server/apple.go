@@ -177,7 +177,7 @@ func (d APNSDeliveryProvider) getPayload(task PushTask, logger *log.Entry) *pl.P
 		}
 		userInfo := make(map[string]string)
 		userInfo["nonce"] = strconv.Itoa(int(encryped.Nonce))
-		if data := encryped.GetEncryptedData(); data != nil && len(data) > 0 {
+		if data := encryped.GetEncryptedData(); len(data) > 0 {
 			userInfo["encrypted_data"] = base64.StdEncoding.EncodeToString(data)
 		} else {
 			logger.Warn("Encrypted push without encrypted data, ignoring")

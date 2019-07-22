@@ -6,6 +6,7 @@ import (
 	"time"
 
 	. "github.com/franela/goblin"
+	"github.com/stretchr/testify/require"
 )
 
 func TestServer(t *testing.T) {
@@ -34,7 +35,11 @@ func TestServer(t *testing.T) {
 				CorrelationId: "test",
 				Body:          &PushBody{CollapseKey: "ckey", Seq: 1},
 			}
-			server.SinglePush(context.Background(), push)
+
+			resp, err := server.SinglePush(context.Background(), push)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+
 			go func() {
 				for {
 					if sent1 && sent2 {

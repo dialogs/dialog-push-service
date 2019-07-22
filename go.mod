@@ -1,4 +1,4 @@
-module dialog-push-service
+module github.com/dialogs/dialog-push-service
 
 go 1.12
 
@@ -23,7 +23,7 @@ require (
 	github.com/sideshow/apns2 v0.0.0-20171218084920-df275e5c35d2
 	github.com/sirupsen/logrus v1.0.5
 	github.com/spf13/viper v1.3.1
-	github.com/stretchr/testify v1.3.0 // indirect
+	github.com/stretchr/testify v1.3.0
 	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 	google.golang.org/genproto v0.0.0-20180413175816-7fd901a49ba6 // indirect

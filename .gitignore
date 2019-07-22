@@ -12,3 +12,5 @@ target/
 *.out
 .DS_Store
 /vendor
+/python
+/testout

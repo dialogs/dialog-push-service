@@ -65,7 +65,7 @@ func (d GoogleDeliveryProvider) populateFcmMessage(msg *fcm.Message, task PushTa
 		}
 		userInfo := make(map[string]string)
 		userInfo["nonce"] = strconv.Itoa(int(encrypted.Nonce))
-		if data := encrypted.GetEncryptedData(); data != nil && len(data) > 0 {
+		if data := encrypted.GetEncryptedData(); len(data) > 0 {
 			userInfo["encrypted"] = base64.StdEncoding.EncodeToString(data)
 		} else {
 			logger.Warn("Encrypted push without encrypted data, ignoring")

@@ -37,7 +37,11 @@ func (ndp NoopDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		if ndp.config.OnSend != nil {
 			ndp.config.OnSend(task)
 		}
-		go func() { task.responder.Send(ndp.config.ProjectID, &DeviceIdList{}) }()
+		go func() {
+			if err := task.responder.Send(ndp.config.ProjectID, &DeviceIdList{}); err != nil {
+				workerLogger.Error("failed to send", err)
+			}
+		}()
 		<-time.After(time.Duration(delay) * time.Microsecond)
 	}
 }
