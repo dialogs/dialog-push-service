@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"errors"
@@ -101,7 +101,6 @@ type serverConfig struct {
 	Noop           []noopConfig
 	GrpcPort       uint16 `mapstructure:"grpc-port"`
 	HTTPPort       uint16 `mapstructure:"http-port"`
-	RavenDsn       string `mapstructure:"raven-dsn"`
 	ReadQueueSize  int    `mapstructure:"read-queue-size"`
 	WriteQueueSize int    `mapstructure:"write-queue-size"`
 }

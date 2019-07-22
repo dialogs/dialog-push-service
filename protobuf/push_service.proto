@@ -1,11 +1,9 @@
 syntax = "proto3";
 
 package main;
+option go_package = "server";
 
-import "scalapb/scalapb.proto";
-option (scalapb.options) = {
-package_name: "im.dlg.push.service";
-};
+import "google/protobuf/wrappers.proto";
 
 message SilentPush {}
 
@@ -44,6 +42,8 @@ message AlertingPush {
     }
     int32 badge = 6;
     Peer peer = 7;
+    google.protobuf.StringValue mid = 8;
+    google.protobuf.StringValue category = 9;
 }
 
 message VoipPush {

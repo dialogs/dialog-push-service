@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/base64"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/edganiukov/fcm"
-	raven "github.com/getsentry/raven-go"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -129,7 +128,6 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 	workerLogger := log.NewEntry(log.StandardLogger()).WithField("worker", workerName)
 	if err != nil {
 		workerLogger.Errorf("Error in spawning FCM worker: %s", err.Error())
-		raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
 		return
 	}
 	workerLogger.Info("Started FCM worker")
@@ -151,7 +149,6 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 		if err != nil {
 			taskLogger.Errorf("FCM response error: %s", err.Error())
-			raven.CaptureError(err, map[string]string{"projectId": d.config.ProjectID})
 			pm.fails.Inc()
 			err = task.responder.Send(d.config.ProjectID, &DeviceIdList{})
 			if err != nil {

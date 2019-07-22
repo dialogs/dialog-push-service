@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"crypto"
@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	raven "github.com/getsentry/raven-go"
 	apns "github.com/sideshow/apns2"
 	pl "github.com/sideshow/apns2/payload"
 	log "github.com/sirupsen/logrus"
@@ -262,7 +261,6 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 			pm.io.Observe(float64(afterIO.Sub(beforeIO).Nanoseconds()))
 			if err != nil {
 				deviceLogger.Errorf("APNS send error %s", err.Error())
-				raven.CaptureError(err, map[string]string{"deviceId": deviceID, "projectId": d.config.ProjectID})
 				pm.fails.Inc()
 				continue
 			} else {
@@ -275,7 +273,6 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 				} else {
 					s := fmt.Sprintf("APNS send error. Reason = %s (status = %d)", resp.Reason, resp.StatusCode)
 					deviceLogger.Warn(s)
-					raven.CaptureMessage(s, map[string]string{"deviceId": deviceID, "projectId": d.config.ProjectID})
 				}
 			} else {
 				deviceLogger.Info("Successfully sent")

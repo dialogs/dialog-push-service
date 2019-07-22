@@ -6,3 +6,9 @@ pkg
 .glide
 src/python
 target/
+
+# temp files
+*.test
+*.out
+.DS_Store
+/vendor
