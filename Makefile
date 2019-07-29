@@ -95,6 +95,6 @@ docker-run:
 	${TARGET} \
 	sh -c "/dialog-push-service -c /var/config/example.yaml"
 
-.PHONY: scala-build
-scala-build:
+.PHONY: scala-publish-local
+scala-publish-local:
 	sbt clean compile publish-local
