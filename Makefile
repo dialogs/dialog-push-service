@@ -11,7 +11,7 @@ SCALA_PB := github.com/scalapb/ScalaPB
 PROTO_SRC:= src/main/protobuf
 
 .PHONY: all
-all: mod proto-golang proto-py lint testall docker-build
+all: gencode mod proto-golang proto-py lint testall docker-build
 
 .PHONY: mod
 mod:
@@ -29,6 +29,22 @@ ifeq ($(shell command -v golangci-lint 2> /dev/null),)
 	GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.17.0
 endif
 	golangci-lint run ./... --exclude "is deprecated"
+
+.PHONY: gencode
+gencode:
+ifeq ($(shell command -v easyjson 2> /dev/null),)
+	go get -u github.com/mailru/easyjson/...
+endif
+
+	$(eval $@_target := pkg/provider/fcm)
+	rm -f ${$@_target}/*_easyjson.go
+	easyjson -all ${$@_target}/request.go
+	easyjson -all ${$@_target}/response.go
+
+	$(eval $@_target := pkg/provider/ans)
+	rm -f ${$@_target}/*_easyjson.go
+	easyjson -all ${$@_target}/request.go
+	easyjson -all ${$@_target}/response.go
 
 .PHONY: proto-golang
 proto-golang:
