@@ -2,6 +2,7 @@ FROM golang:1.12 as builder
 
 WORKDIR $GOPATH/src/github.com/dialogs/dialog-push-service
 
+ADD pkg pkg
 ADD server server
 ADD main.go main.go
 ADD go.mod go.mod

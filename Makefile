@@ -48,7 +48,7 @@ endif
 
 .PHONY: proto-golang
 proto-golang:
-	$(eval $@_target :=server)
+	$(eval $@_target :=pkg/api)
 
 	rm -f ${$@_target}/*.pb.go
 

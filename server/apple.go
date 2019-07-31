@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dialogs/dialog-push-service/pkg/api"
 	apns "github.com/sideshow/apns2"
 	pl "github.com/sideshow/apns2/payload"
 	log "github.com/sirupsen/logrus"
@@ -95,7 +96,7 @@ func loadCertificate(filename string) (cert tls.Certificate, err error) {
 	return
 }
 
-func apnsFromAlerting(payload *pl.Payload, alerting *AlertingPush, sound string) *pl.Payload {
+func apnsFromAlerting(payload *pl.Payload, alerting *api.AlertingPush, sound string) *pl.Payload {
 	if locAlert := alerting.GetLocAlertTitle(); locAlert != nil {
 		payload.AlertTitleLocKey(locAlert.GetLocKey())
 		payload.AlertTitleLocArgs(locAlert.GetLocArgs())
@@ -233,7 +234,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 
 		payload = d.getPayload(task, taskLogger)
 		if payload == nil {
-			err = task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			err = task.responder.Send(d.config.ProjectID, &api.DeviceIdList{})
 			if err != nil {
 				taskLogger.Errorf("send response from provider failed: %v", err)
 			}
@@ -280,7 +281,7 @@ func (d APNSDeliveryProvider) spawnWorker(workerName string, pm *providerMetrics
 		}
 		pm.pushes.Add(float64(len(task.deviceIds)))
 		//if len(failures) > 0 { // We need to send responses in any case because of rqRp-cycle support
-		err = task.responder.Send(d.config.ProjectID, &DeviceIdList{DeviceIds: failures})
+		err = task.responder.Send(d.config.ProjectID, &api.DeviceIdList{DeviceIds: failures})
 		if err != nil {
 			taskLogger.Errorf("send response from provider failed: %v", err)
 		}

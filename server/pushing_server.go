@@ -3,6 +3,7 @@ package server
 import (
 	"io"
 
+	"github.com/dialogs/dialog-push-service/pkg/api"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/peer"
 
@@ -16,20 +17,20 @@ type PushingServerImpl struct {
 	writeQueueSize   int
 }
 
-func peerTypeProtobufToMPS(peerType PeerType) int {
+func peerTypeProtobufToMPS(peerType api.PeerType) int {
 	switch peerType {
-	case Private:
+	case api.Private:
 		return 1
-	case Group:
+	case api.Group:
 		return 2
-	case SIP:
+	case api.SIP:
 		return 4
 	default:
 		return 0
 	}
 }
 
-func (p *PushingServerImpl) startStream(ctx context.Context, requests chan *Push, responses chan<- *PushResult) {
+func (p *PushingServerImpl) startStream(ctx context.Context, requests chan *api.Push, responses chan<- *PushResult) {
 	responder := NewStreamResponder(ctx, responses)
 	for push := range requests {
 		log.Infof("Incoming streaming request: %s", push.GoString())
@@ -37,19 +38,19 @@ func (p *PushingServerImpl) startStream(ctx context.Context, requests chan *Push
 	}
 }
 
-func (p *PushingServerImpl) Ping(ctx context.Context, ping *PingRequest) (*PongResponse, error) {
-	return &PongResponse{}, nil
+func (p *PushingServerImpl) Ping(ctx context.Context, ping *api.PingRequest) (*api.PongResponse, error) {
+	return &api.PongResponse{}, nil
 }
 
-func streamOut(stream Pushing_PushStreamServer, responses <-chan *PushResult, errch chan<- error) {
+func streamOut(stream api.Pushing_PushStreamServer, responses <-chan *PushResult, errch chan<- error) {
 	log.Infof("Opening stream out")
 	defer func() { log.Infof("Closing stream out") }()
 
 	for {
 		select {
 		case res := <-responses:
-			response := &Response{
-				ProjectInvalidations: map[string]*DeviceIdList{res.ProjectId: res.Failures},
+			response := &api.Response{
+				ProjectInvalidations: map[string]*api.DeviceIdList{res.ProjectId: res.Failures},
 			}
 			err := stream.Send(response)
 			if err != nil {
@@ -62,7 +63,7 @@ func streamOut(stream Pushing_PushStreamServer, responses <-chan *PushResult, er
 	}
 }
 
-func streamIn(stream Pushing_PushStreamServer, requests chan<- *Push, errch chan<- error, pm *peerMetrics) {
+func streamIn(stream api.Pushing_PushStreamServer, requests chan<- *api.Push, errch chan<- error, pm *peerMetrics) {
 	log.Infof("Opening stream in")
 	defer func() { log.Infof("Closing stream in") }()
 
@@ -93,9 +94,9 @@ func (p *PushingServerImpl) getAddrInfo(ctx context.Context) string {
 	return "unknown address"
 }
 
-func (p *PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
+func (p *PushingServerImpl) PushStream(stream api.Pushing_PushStreamServer) error {
 	errch := make(chan error, 2)
-	requests := make(chan *Push, p.readQueueSize)
+	requests := make(chan *api.Push, p.readQueueSize)
 	responses := make(chan *PushResult, p.writeQueueSize)
 
 	addrInfo := p.getAddrInfo(stream.Context())
@@ -125,7 +126,7 @@ func (p *PushingServerImpl) PushStream(stream Pushing_PushStreamServer) error {
 	return err
 }
 
-func (p *PushingServerImpl) SinglePush(ctx context.Context, push *Push) (*Response, error) {
+func (p *PushingServerImpl) SinglePush(ctx context.Context, push *api.Push) (*api.Response, error) {
 	addrInfo := p.getAddrInfo(ctx)
 	pm, err := p.metricsCollector.getMetricsForPeer(addrInfo)
 	if err != nil {
@@ -133,7 +134,7 @@ func (p *PushingServerImpl) SinglePush(ctx context.Context, push *Push) (*Respon
 	}
 	pm.pushRecv.Inc()
 
-	rsp := &Response{ProjectInvalidations: make(map[string]*DeviceIdList)}
+	rsp := &api.Response{ProjectInvalidations: make(map[string]*api.DeviceIdList)}
 	response := make(chan *PushResult, p.writeQueueSize)
 	responder := NewUnaryResponder(ctx, response)
 
@@ -160,7 +161,7 @@ func ensureProjectIdUniqueness(projectId string, providers map[string]DeliveryPr
 	return !exists
 }
 
-func newPushingServer(config *serverConfig) PushingServer {
+func newPushingServer(config *serverConfig) api.PushingServer {
 	m := newMetricsCollector()
 	p := &PushingServerImpl{
 		metricsCollector: m,

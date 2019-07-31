@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dialogs/dialog-push-service/pkg/api"
 	"github.com/edganiukov/fcm"
 	log "github.com/sirupsen/logrus"
 )
@@ -25,7 +26,7 @@ func (d GoogleDeliveryProvider) shouldInvalidate(err string) bool {
 	return err == ErrInvalidRegistration || err == ErrNotRegistered
 }
 
-func fcmFromAlerting(n *fcm.Notification, alerting *AlertingPush) *fcm.Notification {
+func fcmFromAlerting(n *fcm.Notification, alerting *api.AlertingPush) *fcm.Notification {
 	n.Title = alerting.GetSimpleAlertTitle()
 	n.Body = alerting.GetSimpleAlertBody()
 	if badge := alerting.GetBadge(); badge > 0 {
@@ -135,7 +136,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		taskLogger := workerLogger.WithField("id", task.correlationId)
 		resetFcmMessage(msg)
 		if !d.populateFcmMessage(msg, task, taskLogger) {
-			err = task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			err = task.responder.Send(d.config.ProjectID, &api.DeviceIdList{})
 			if err != nil {
 				taskLogger.Errorf("send response from provider failed: %v", err)
 			}
@@ -150,7 +151,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		if err != nil {
 			taskLogger.Errorf("FCM response error: %s", err.Error())
 			pm.fails.Inc()
-			err = task.responder.Send(d.config.ProjectID, &DeviceIdList{})
+			err = task.responder.Send(d.config.ProjectID, &api.DeviceIdList{})
 			if err != nil {
 				taskLogger.Errorf("send response from provider failed: %v", err)
 			}
@@ -177,7 +178,7 @@ func (d GoogleDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 		} else {
 			taskLogger.Info("Successfully sent")
 		}
-		err = task.responder.Send(d.config.ProjectID, &DeviceIdList{DeviceIds: failures})
+		err = task.responder.Send(d.config.ProjectID, &api.DeviceIdList{DeviceIds: failures})
 		if err != nil {
 			taskLogger.Errorf("send response from provider failed: %v", err)
 		}

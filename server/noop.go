@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/dialogs/dialog-push-service/pkg/api"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -38,7 +39,7 @@ func (ndp NoopDeliveryProvider) spawnWorker(workerName string, pm *providerMetri
 			ndp.config.OnSend(task)
 		}
 		go func() {
-			if err := task.responder.Send(ndp.config.ProjectID, &DeviceIdList{}); err != nil {
+			if err := task.responder.Send(ndp.config.ProjectID, &api.DeviceIdList{}); err != nil {
 				workerLogger.Error("failed to send", err)
 			}
 		}()

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dialogs/dialog-push-service/pkg/api"
 	. "github.com/franela/goblin"
 	"github.com/stretchr/testify/require"
 )
@@ -27,13 +28,13 @@ func TestServer(t *testing.T) {
 	g := Goblin(t)
 	g.Describe("Server", func() {
 		g.It("Should send single pushes", func(done Done) {
-			push := &Push{
-				Destinations: map[string]*DeviceIdList{
+			push := &api.Push{
+				Destinations: map[string]*api.DeviceIdList{
 					"test1": {DeviceIds: []string{"a", "b", "c", "d", "e"}},
 					"test2": {DeviceIds: []string{"f", "g"}},
 				},
 				CorrelationId: "test",
-				Body:          &PushBody{CollapseKey: "ckey", Seq: 1},
+				Body:          &api.PushBody{CollapseKey: "ckey", Seq: 1},
 			}
 
 			resp, err := server.SinglePush(context.Background(), push)

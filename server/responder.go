@@ -1,9 +1,13 @@
 package server
 
-import "context"
+import (
+	"context"
+
+	"github.com/dialogs/dialog-push-service/pkg/api"
+)
 
 type Responder interface {
-	Send(projectId string, failures *DeviceIdList) error
+	Send(projectId string, failures *api.DeviceIdList) error
 }
 
 type StreamResponder struct {
@@ -18,7 +22,7 @@ func NewStreamResponder(ctx context.Context, response chan<- *PushResult) *Strea
 	}
 }
 
-func (s *StreamResponder) Send(projectId string, failures *DeviceIdList) error {
+func (s *StreamResponder) Send(projectId string, failures *api.DeviceIdList) error {
 	if len(failures.DeviceIds) == 0 {
 		return nil
 	}
@@ -43,7 +47,7 @@ func NewUnaryResponder(ctx context.Context, response chan<- *PushResult) *UnaryR
 	}
 }
 
-func (u *UnaryResponder) Send(projectId string, failures *DeviceIdList) error {
+func (u *UnaryResponder) Send(projectId string, failures *api.DeviceIdList) error {
 	select {
 	case u.response <- &PushResult{ProjectId: projectId, Failures: failures}:
 		return nil

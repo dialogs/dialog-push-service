@@ -7,11 +7,12 @@ import (
 	_ "net/http/pprof"
 	"os"
 
+	"github.com/dialogs/dialog-push-service/pkg/api"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jessevdk/go-flags"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
 	"google.golang.org/grpc"
@@ -33,7 +34,7 @@ func (config *serverConfig) startGrpc() *grpc.Server {
 		//grpc.Creds(c)
 	)
 	grpc_prometheus.Register(grpcServer)
-	RegisterPushingServer(grpcServer, pushingServer)
+	api.RegisterPushingServer(grpcServer, pushingServer)
 	return grpcServer
 }
 
@@ -53,7 +54,7 @@ func StartServer() {
 	if err != nil {
 		log.Fatalf("Failed to start gRPC server: %s", err.Error())
 	}
-	http.Handle("/metrics", prometheus.Handler())
+	http.Handle("/metrics", promhttp.Handler())
 	go func() {
 		log.Infof("Started HTTP server at %d", config.HTTPPort)
 		panic(http.ListenAndServe(fmt.Sprintf(":%d", config.HTTPPort), nil))

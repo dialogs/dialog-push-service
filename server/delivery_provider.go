@@ -3,19 +3,20 @@ package server
 import (
 	"fmt"
 
+	"github.com/dialogs/dialog-push-service/pkg/api"
 	log "github.com/sirupsen/logrus"
 )
 
 type PushTask struct {
 	deviceIds     []string
-	body          *PushBody
+	body          *api.PushBody
 	responder     Responder
 	correlationId string
 }
 
 type PushResult struct {
 	ProjectId string
-	Failures  *DeviceIdList
+	Failures  *api.DeviceIdList
 }
 
 type DeliveryProvider interface {
@@ -33,7 +34,7 @@ func spawnWorkers(d DeliveryProvider, pm *providerMetrics) {
 	}
 }
 
-func (p PushingServerImpl) deliverPush(push *Push, responder Responder) int {
+func (p PushingServerImpl) deliverPush(push *api.Push, responder Responder) int {
 	tasks := 0
 	for projectId, deviceList := range push.Destinations {
 		deviceIds := deviceList.GetDeviceIds()

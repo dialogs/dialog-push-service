@@ -15,7 +15,7 @@ type providerMetrics struct {
 	success prometheus.Counter
 	fails   prometheus.Counter
 	pushes  prometheus.Counter
-	io      prometheus.Histogram
+	io      prometheus.Observer
 }
 
 type peerMetrics struct {
