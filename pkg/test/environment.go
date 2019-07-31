@@ -49,3 +49,14 @@ func GetGoogleServiceAccount() ([]byte, error) {
 
 	return jsonData, nil
 }
+
+func GetGoogleCloudMessageSettings() ([]byte, error) {
+
+	path := os.Getenv("GOOGLE_LEGACY_APPLICATION_CREDENTIALS")
+	jsonData, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonData, nil
+}

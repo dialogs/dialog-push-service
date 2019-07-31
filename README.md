@@ -27,14 +27,22 @@ You also need to make sure the `protoc-gen-gogoslick` is in the `$PATH`.
 2. create environment variable __APPLE_PUSH_CERTIFICATE__ with path to *PEM*
 3. download [service-account.json](https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk)
 4. create environment variable __GOOGLE_APPLICATION_CREDENTIALS__ with path to *service-account.json*
-5. create devices tokens file. File format:
+5. copy [server key](https://console.firebase.google.com/project/_/settings/cloudmessaging/android:com.example.push)
+6. save *server key* in a file. File format:
+```json
+{
+  "key":"<server key>"
+}
+```
+7. create environment variable __GOOGLE_LEGACY_APPLICATION_CREDENTIALS__ with path to server key file
+8. create devices tokens file. File format:
 ```json
 {
   "android": "<token>",
   "ios": "<token>"
 }
 ```
-1. create environment variable __PUSH_DEVICES__ with path to *devices tokens file*
+9. create environment variable __PUSH_DEVICES__ with path to *devices tokens file*
 
 
 ## Client application
