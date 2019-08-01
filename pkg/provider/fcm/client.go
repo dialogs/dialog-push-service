@@ -100,11 +100,14 @@ func (c *Client) Send(ctx context.Context, message *Request) (retval *Response, 
 func (c *Client) send(ctx context.Context, message *Request) (*Response, error) {
 
 	sendBodyErr := make(chan error, 1)
-	defer close(sendBodyErr)
 
 	reqBodyReader, reqBodyWriter := io.Pipe()
+	defer reqBodyReader.Close()
+
 	go func() {
 		defer reqBodyWriter.Close()
+		defer close(sendBodyErr)
+
 		sendBodyErr <- json.NewEncoder(reqBodyWriter).Encode(message)
 	}()
 
