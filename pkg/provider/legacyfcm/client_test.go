@@ -1,8 +1,6 @@
 package legacyfcm
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"testing"
 
@@ -102,18 +100,10 @@ func getClient(t *testing.T) *Client {
 func getAccountKey(t *testing.T) string {
 	t.Helper()
 
-	data, err := test.GetGoogleCloudMessageSettings()
+	key, err := test.GetAccountKey()
 	require.NoError(t, err)
 
-	settings := &struct {
-		Key string `json:"key"`
-	}{}
-
-	r := bytes.NewReader(data)
-	require.NoError(t, json.NewDecoder(r).Decode(settings))
-	require.NotEmpty(t, settings.Key)
-
-	return settings.Key
+	return key
 }
 
 func getDeviceToken(t *testing.T) string {

@@ -30,7 +30,11 @@ func GetPushDevices() (android, ios string, _ error) {
 
 func GetIOSCertificatePem() ([]byte, error) {
 
-	path := os.Getenv("APPLE_PUSH_CERTIFICATE")
+	path, err := GetPathToIOSCertificatePem()
+	if err != nil {
+		return nil, err
+	}
+
 	pem, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -39,15 +43,41 @@ func GetIOSCertificatePem() ([]byte, error) {
 	return pem, nil
 }
 
+func GetPathToIOSCertificatePem() (string, error) {
+
+	path := os.Getenv("APPLE_PUSH_CERTIFICATE")
+	_, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+
+	return path, nil
+}
+
 func GetGoogleServiceAccount() ([]byte, error) {
 
-	path := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	path, err := GetPathToGoogleServiceAccount()
+	if err != nil {
+		return nil, err
+	}
+
 	jsonData, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
 	return jsonData, nil
+}
+
+func GetPathToGoogleServiceAccount() (string, error) {
+
+	path := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	_, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+
+	return path, nil
 }
 
 func GetGoogleCloudMessageSettings() ([]byte, error) {
@@ -59,4 +89,23 @@ func GetGoogleCloudMessageSettings() ([]byte, error) {
 	}
 
 	return jsonData, nil
+}
+
+func GetAccountKey() (string, error) {
+
+	data, err := GetGoogleCloudMessageSettings()
+	if err != nil {
+		return "", err
+	}
+
+	settings := &struct {
+		Key string `json:"key"`
+	}{}
+
+	r := bytes.NewReader(data)
+	if err := json.NewDecoder(r).Decode(settings); err != nil {
+		return "", err
+	}
+
+	return settings.Key, nil
 }
