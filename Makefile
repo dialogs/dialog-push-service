@@ -92,8 +92,7 @@ $(TEST_TARGETS):
 
 	@echo "== test directory $($@_package) =="
 
-	# TODO fix tests and add '-race' option
-	@go test $($@_package) -v -coverprofile $(TEST_OUT_DIR)/$($@_filename)_cover.out \
+	@go test $($@_package) -v -race -coverprofile $(TEST_OUT_DIR)/$($@_filename)_cover.out \
     >> $(TEST_OUT_DIR)/$($@_filename).out \
    || ( echo 'fail $($@_package)' && cat $(TEST_OUT_DIR)/$($@_filename).out; exit 1);
 
