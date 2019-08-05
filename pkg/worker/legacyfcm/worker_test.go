@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/dialogs/dialog-push-service/pkg/converter"
+	"github.com/dialogs/dialog-push-service/pkg/metric"
 	"github.com/dialogs/dialog-push-service/pkg/test"
 	"github.com/dialogs/dialog-push-service/pkg/worker"
 	"github.com/spf13/viper"
@@ -21,11 +22,11 @@ func TestWokerNew(t *testing.T) {
 	cfg := getConfig(t)
 	logger := getLogger(t)
 
-	w, err := New(cfg, logger)
+	w, err := New(cfg, logger, metric.New())
 	require.NoError(t, err)
 
 	require.Equal(t, worker.KindFcmLegacy, w.Kind())
-	require.Equal(t, "project-id-123", w.ProviderID())
+	require.Equal(t, "project-id-123", w.ProjectID())
 	require.Equal(t, true, w.NoOpMode())
 }
 
@@ -34,13 +35,13 @@ func TestWokerSendErrInvalidDeviceToken(t *testing.T) {
 	cfg := getConfig(t)
 	logger := getLogger(t)
 
-	w, err := New(cfg, logger)
+	w, err := New(cfg, logger, metric.New())
 	require.NoError(t, err)
 
 	chOut := w.Send(context.Background(), &worker.Request{})
 	require.Equal(t,
 		&worker.Response{
-			ProjectID: w.ProviderID(),
+			ProjectID: w.ProjectID(),
 			Error:     worker.ErrInvalidDeviceToken,
 		},
 		<-chOut)
@@ -54,7 +55,7 @@ func TestWokerSendErrInvalidIncomingDataType(t *testing.T) {
 	cfg := getConfig(t)
 	logger := getLogger(t)
 
-	w, err := New(cfg, logger)
+	w, err := New(cfg, logger, metric.New())
 	require.NoError(t, err)
 
 	chOut := w.Send(context.Background(), &worker.Request{
@@ -63,7 +64,7 @@ func TestWokerSendErrInvalidIncomingDataType(t *testing.T) {
 
 	require.Equal(t,
 		&worker.Response{
-			ProjectID:   w.ProviderID(),
+			ProjectID:   w.ProjectID(),
 			DeviceToken: "token1",
 			Error:       converter.ErrInvalidIncomingDataType,
 		},
@@ -71,7 +72,7 @@ func TestWokerSendErrInvalidIncomingDataType(t *testing.T) {
 
 	require.Equal(t,
 		&worker.Response{
-			ProjectID:   w.ProviderID(),
+			ProjectID:   w.ProjectID(),
 			DeviceToken: "token2",
 			Error:       converter.ErrInvalidIncomingDataType,
 		},
@@ -86,7 +87,7 @@ func TestWokerSendNopOk(t *testing.T) {
 	cfg := getConfig(t)
 	logger := getLogger(t)
 
-	w, err := New(cfg, logger)
+	w, err := New(cfg, logger, metric.New())
 	require.NoError(t, err)
 
 	chOut := w.Send(context.Background(), &worker.Request{
@@ -96,14 +97,14 @@ func TestWokerSendNopOk(t *testing.T) {
 
 	require.Equal(t,
 		&worker.Response{
-			ProjectID:   w.ProviderID(),
+			ProjectID:   w.ProjectID(),
 			DeviceToken: "token1",
 		},
 		<-chOut)
 
 	require.Equal(t,
 		&worker.Response{
-			ProjectID:   w.ProviderID(),
+			ProjectID:   w.ProjectID(),
 			DeviceToken: "token2",
 		},
 		<-chOut)
@@ -120,7 +121,7 @@ func TestWokerSendOk(t *testing.T) {
 
 	cfg.NopMode = false
 
-	w, err := New(cfg, logger)
+	w, err := New(cfg, logger, metric.New())
 	require.NoError(t, err)
 
 	chOut := w.Send(context.Background(), &worker.Request{
@@ -130,14 +131,14 @@ func TestWokerSendOk(t *testing.T) {
 
 	require.Equal(t,
 		&worker.Response{
-			ProjectID:   w.ProviderID(),
+			ProjectID:   w.ProjectID(),
 			DeviceToken: token,
 		},
 		<-chOut)
 
 	require.Equal(t,
 		&worker.Response{
-			ProjectID:   w.ProviderID(),
+			ProjectID:   w.ProjectID(),
 			DeviceToken: "token2",
 			Error:       errors.New("invalid registration token"),
 		},
@@ -145,7 +146,7 @@ func TestWokerSendOk(t *testing.T) {
 
 	require.Equal(t,
 		&worker.Response{
-			ProjectID:   w.ProviderID(),
+			ProjectID:   w.ProjectID(),
 			DeviceToken: token,
 		},
 		<-chOut)

@@ -86,6 +86,11 @@ func (c *Client) Send(ctx context.Context, message *Request) (retval *Response, 
 	for try := 0; try < sendTries; try++ {
 		retval, err = c.send(ctx, message)
 		if err != nil {
+			existTries := try < sendTries-1
+			if err == context.DeadlineExceeded && existTries {
+				continue
+			}
+
 			return nil, err
 		}
 

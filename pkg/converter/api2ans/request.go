@@ -62,7 +62,7 @@ func (r *Request) Convert(in interface{}, out interface{}) error {
 		return ErrIgnoringSilentPush
 	}
 
-	payload := &payload.Payload{}
+	payload := payload.NewPayload()
 	if voip := body.GetVoipPush(); voip != nil {
 		err = r.setVoIPPayload(payload, voip)
 

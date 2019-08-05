@@ -2,18 +2,6 @@ grpc-port: 8010
 http-port: 8011
 read-queue-size: 50
 write-queue-size: 50
-noop:
-  - project-id: 1
-    delay: 5
-  - project-id: 2
-    delay: 5
-  - project-id: 3
-    delay: 5
-  - project-id: 4
-    delay: 5
-  - project-id: 5
-    delay: 5
-  - project-id: 6
 google:
   - project-id: 251541100516
     key: my-precious-key

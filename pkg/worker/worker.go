@@ -3,8 +3,11 @@ package worker
 import (
 	"context"
 	"errors"
+	"runtime"
+	"time"
 
 	"github.com/dialogs/dialog-push-service/pkg/converter"
+	"github.com/dialogs/dialog-push-service/pkg/metric"
 	"go.uber.org/zap"
 )
 
@@ -23,6 +26,7 @@ type Worker struct {
 	nopMode            bool
 	threads            chan struct{}
 	logger             *zap.Logger
+	metric             *metric.Provider
 	reqConverter       converter.IRequestConverter
 	fnNewNotification  FnNewNotification
 	fnSendNotification FnSendNotification
@@ -32,14 +36,15 @@ func New(
 	cfg *Config,
 	kind Kind,
 	logger *zap.Logger,
+	svcMetric *metric.Service,
 	reqConverter converter.IRequestConverter,
 	fnNewNotification FnNewNotification,
 	fnSendNotification FnSendNotification,
-) *Worker {
+) (*Worker, error) {
 
 	countThreads := cfg.CountThreads
 	if countThreads <= 0 {
-		countThreads = 1
+		countThreads = runtime.NumCPU()
 	}
 
 	threads := make(chan struct{}, countThreads)
@@ -47,23 +52,29 @@ func New(
 		threads <- struct{}{}
 	}
 
+	providerMetric, err := svcMetric.GetProviderMetrics(kind.String(), cfg.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Worker{
 		projectID:          cfg.ProjectID,
 		kind:               kind,
 		nopMode:            cfg.NopMode,
 		threads:            threads,
-		logger:             logger,
+		logger:             logger.With(zap.String("worker", kind.String())),
+		metric:             providerMetric,
 		reqConverter:       reqConverter,
 		fnNewNotification:  fnNewNotification,
 		fnSendNotification: fnSendNotification,
-	}
+	}, nil
 }
 
 func (w *Worker) Kind() Kind {
 	return w.kind
 }
 
-func (w *Worker) ProviderID() string {
+func (w *Worker) ProjectID() string {
 	return w.projectID
 }
 
@@ -100,24 +111,36 @@ func (w *Worker) Send(ctx context.Context, req *Request) <-chan *Response {
 			}
 
 			// hide device token to hash
-			l := w.logger.With(zap.String("token hash", TokenHash(token)))
+			l := w.logger.With(
+				zap.String("token hash", TokenHash(token)),
+				zap.String("id", req.CorrelationID))
 
-			if err != nil {
-				// convert error
-				l.Error("convert incoming message", zap.Error(err))
-				resp.Error = err
-
-			} else if w.nopMode {
-				l.Info("nop mode", zap.Any("send notification", resp))
-
-			} else {
-
-				err := w.fnSendNotification(ctx, token, out)
+			select {
+			case <-ctx.Done():
+				return
+			default:
 				if err != nil {
+					// convert error
+					l.Error("convert incoming message", zap.Error(err))
 					resp.Error = err
-					l.Error("failed to send", zap.Error(resp.Error))
+
+				} else if w.nopMode {
+					l.Info("nop mode", zap.Any("send notification", resp))
+
 				} else {
-					l.Info("success send")
+
+					metricStart := time.Now()
+					err := w.fnSendNotification(ctx, token, out)
+					w.metric.PushesInc(metricStart)
+
+					if err != nil {
+						w.metric.FailsInc()
+						resp.Error = err
+						l.Error("failed to send", zap.Error(resp.Error))
+					} else {
+						w.metric.SuccessInc()
+						l.Info("success send")
+					}
 				}
 			}
 

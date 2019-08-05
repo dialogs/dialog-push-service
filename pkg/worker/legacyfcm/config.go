@@ -17,7 +17,7 @@ type Config struct {
 	// Server key:
 	// https://console.firebase.google.com/project/_/settings/cloudmessaging/
 	ServerKey string `mapstructure:"key"`
-	SendTries int    `mapstructure:"send-tries"`
+	SendTries int    `mapstructure:"retries"`
 }
 
 func NewConfig(src *viper.Viper) (*Config, error) {

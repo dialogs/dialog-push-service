@@ -6,6 +6,6 @@ import (
 
 type IWorker interface {
 	Kind() Kind
-	ProviderID() string
+	ProjectID() string
 	Send(context.Context, *Request) <-chan *Response
 }

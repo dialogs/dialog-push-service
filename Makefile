@@ -3,12 +3,14 @@ PACKAGES_WITH_TESTS:=$(shell go list -f="{{if or .TestGoFiles .XTestGoFiles}}{{.
 TEST_TARGETS:=$(foreach p,${PACKAGES_WITH_TESTS},test-$(p))
 TEST_OUT_DIR:=testout
 
-VERSION  := 0.0.1
-NAME     := dialog-push-service
-REVISION := $(shell git rev-parse --short HEAD)
-TARGET   := ${NAME}:${VERSION}
-SCALA_PB := github.com/scalapb/ScalaPB
-PROTO_SRC:= src/main/protobuf
+TAG            := 0.0.1
+PROJECT        := dialog-push-service
+COMMIT         := $(shell git rev-parse --short HEAD)
+DOCKER_REGISTRY?=
+IMAGE          := ${DOCKER_REGISTRY}${PROJECT}:${TAG}
+SCALA_PB       := github.com/scalapb/ScalaPB
+PROTO_SRC      := src/main/protobuf
+
 
 .PHONY: all
 all: gencode mod proto-golang proto-py lint testall docker-build
@@ -98,9 +100,15 @@ $(TEST_TARGETS):
 
 .PHONY: docker-build
 docker-build:
-	-docker rm -f `docker ps -a -q --filter=ancestor=${TARGET}`
-	-docker rmi -f `docker images -q ${TARGET}`
-	docker build -f Dockerfile --tag ${TARGET} .
+	-docker rm -f `docker ps -a -q --filter=ancestor=${IMAGE}`
+	-docker rmi -f `docker images -q ${IMAGE}`
+	-docker rmi $(docker images -f "dangling=true" -q)
+
+	docker build -f Dockerfile \
+	--tag ${IMAGE} \
+	--build-arg "COMMIT=${COMMIT}" \
+	--build-arg "RELEASE=${TAG}" \
+	.
 
 .PHONY: docker-run
 docker-run:
@@ -108,7 +116,7 @@ docker-run:
 	-p "8010:8010" \
 	-p "8011:8011" \
 	-v "$(shell pwd)/example.yaml:/var/config/example.yaml" \
-	${TARGET} \
+	${IMAGE} \
 	sh -c "/dialog-push-service -c /var/config/example.yaml"
 
 .PHONY: scala-publish-local
