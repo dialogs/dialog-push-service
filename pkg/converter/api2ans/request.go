@@ -73,7 +73,8 @@ func (r *Request) Convert(in interface{}, out interface{}) error {
 		err = r.setEncryptedPayload(payload, encryped)
 
 	} else {
-		err = converter.ErrInvalidIncomingPayloadData
+		err = converter.ErrorByIncomingMessage(body)
+
 	}
 
 	if err != nil {

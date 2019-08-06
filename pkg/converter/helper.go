@@ -1,8 +1,13 @@
 package converter
 
 import (
+	"bytes"
+	"errors"
+
 	"github.com/dialogs/dialog-push-service/pkg/api"
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc/status"
 )
 
 func GetKindFromConfig(src *viper.Viper) Kind {
@@ -27,6 +32,18 @@ func GetBinaryPushBody(in interface{}) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+func ErrorByIncomingMessage(body *api.PushBody) error {
+
+	marshaller := jsonpb.Marshaler{}
+	buf := bytes.NewBuffer(nil)
+	if err := marshaller.Marshal(buf, body); err != nil {
+		st, _ := status.FromError(err)
+		return errors.New("incoming body to json:" + st.Message())
+	}
+
+	return errors.New("invalid incoming payload data:" + buf.String())
 }
 
 func PeerTypeProtobufToMPS(peerType api.PeerType) int {

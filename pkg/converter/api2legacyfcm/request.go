@@ -47,7 +47,8 @@ func (r *Request) Convert(in interface{}, out interface{}) error {
 		err = r.serAlertingPush(req, alerting)
 
 	} else {
-		err = converter.ErrInvalidIncomingPayloadData
+		err = converter.ErrorByIncomingMessage(body)
+
 	}
 
 	if err != nil {
