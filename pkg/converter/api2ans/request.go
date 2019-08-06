@@ -245,7 +245,7 @@ func checkVoIPTopicByCert(topic string, cert *tls.Certificate) error {
 		})
 
 		if index >= l {
-			return fmt.Errorf("invalid VoIP topic: '%s'", topic)
+			return fmt.Errorf("invalid VoIP topic: '%s' (topics in certificate: %v)", topic, topicsList)
 		}
 	}
 
