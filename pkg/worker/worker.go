@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"runtime"
-	"time"
 
 	"github.com/dialogs/dialog-push-service/pkg/converter"
 	"github.com/dialogs/dialog-push-service/pkg/metric"
@@ -129,9 +128,9 @@ func (w *Worker) Send(ctx context.Context, req *Request) <-chan *Response {
 
 				} else {
 
-					metricStart := time.Now()
+					timerCancel := w.metric.NewIOTimer()
 					err := w.fnSendNotification(ctx, token, out)
-					w.metric.PushesInc(metricStart)
+					timerCancel()
 
 					if err != nil {
 						w.metric.FailsInc()

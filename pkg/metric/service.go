@@ -5,7 +5,6 @@ import "github.com/prometheus/client_golang/prometheus"
 type Service struct {
 	success *prometheus.CounterVec
 	fails   *prometheus.CounterVec
-	pushes  *prometheus.CounterVec
 	io      *prometheus.HistogramVec
 
 	pushesRecv *prometheus.CounterVec
@@ -24,11 +23,6 @@ func New() *Service {
 			Name:      "failed_tasks",
 			Help:      "Failed tasks"},
 			[]string{"kind", "projectId"}),
-		pushes: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Namespace: "push",
-			Name:      "pushes_sent",
-			Help:      "Pushes sent (w/o result checK)"},
-			[]string{"kind", "projectId"}),
 		io: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: "push",
 			Name:      "io",
@@ -44,7 +38,6 @@ func New() *Service {
 	for _, c := range []prometheus.Collector{
 		m.success,
 		m.fails,
-		m.pushes,
 		m.io,
 		m.pushesRecv,
 	} {
@@ -72,11 +65,6 @@ func (m *Service) GetProviderMetrics(kind, projectId string) (*Provider, error) 
 	}
 
 	p.success, err = m.success.GetMetricWith(prometheus.Labels{"kind": kind, "projectId": projectId})
-	if err != nil {
-		return nil, err
-	}
-
-	p.pushes, err = m.pushes.GetMetricWith(prometheus.Labels{"kind": kind, "projectId": projectId})
 	if err != nil {
 		return nil, err
 	}
