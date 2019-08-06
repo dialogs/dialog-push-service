@@ -21,7 +21,80 @@ go get github.com/gogo/protobuf/gogoproto
 ```
 You also need to make sure the `protoc-gen-gogoslick` is in the `$PATH`.
 
-## Test environment:
+## Config
+
+### [Legacy FCM HTTP](https://firebase.google.com/docs/cloud-messaging/http-server-ref)
+
+```yaml
+google:
+  - project-id: <string>
+    key: <string>
+    retries: <number>
+    nop-mode: <boolean>
+    workers: <number>
+    converter-kind: <string>
+    allow-alerts: <boolean>
+    sandbox: <boolean>
+```
+properties:
+- project-id - identificator of the provider
+- [key](https://firebase.google.com/docs/cloud-messaging/auth-server#authorize_legacy_protocol_send_requests)
+- retries - count retries by server error
+- nop-mode - if the option is set to true, the message will not be sent
+- workers - count workers for sending. By default the value is equal count of processors.
+- converter-kind - kind of the converter. By default is equal 'api'(protobuf message to provider message). Variants: api, binary
+- allow-alerts - enabled alerting messages for converter protobuf push message to a notification message
+- sandbox - if the option is set to true, the message will not be actually sent. Instead FCM performs all the necessary validations, and emulates the send operation
+
+### [FCM HTTP v1](https://firebase.google.com/docs/cloud-messaging/concept-options)
+
+```yaml
+fcm-v1:
+  - project-id: <string>
+    service-account: <string>
+    send-tries: <number>
+    send-timeout: <string>
+    nop-mode: <boolean>
+    workers: <number>
+    converter-kind: <string>
+    allow-alerts: <boolean>
+    sandbox: <boolean>
+```
+properties:
+- project-id - identificator of the provider
+- [service-account](https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk)
+- send-tries - count retries by server error
+- send-timeout - time duration. Example: 1s, 2m
+- nop-mode - if the option is set to true, the message will not be sent
+- workers - count workers for sending. By default the value is equal count of processors.
+- converter-kind - kind of the converter. By default is equal 'api'(protobuf message to provider message). Variants: api, binary
+- allow-alerts - enabled alerting messages for converter protobuf push message to a notification message
+- sandbox - if the option is set to true, the message will not be actually sent. Instead FCM performs all the necessary validations, and emulates the send operation
+
+### [APNS](https://developer.apple.com/library/archive/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/APNSOverview.html#//apple_ref/doc/uid/TP40008194-CH8-SW1)
+
+```yaml
+apple:
+  - project-id: <string>
+    pem: <string>
+    nop-mode: <boolean>
+    workers: <number>
+    converter-kind: <string>
+    allow-alerts: <boolean>
+    sandbox: <boolean>
+```
+properties:
+- project-id - identificator of the provider
+- pem - path to tls certificate in pem format
+- nop-mode - if the option is set to true, the message will not be sent
+- workers - count workers for sending. By default the value is equal count of processors.
+- converter-kind - kind of the converter. By default is equal 'api'(protobuf message to provider message). Variants: api, binary
+- allow-alerts - enabled alerting messages for converter protobuf push message to a notification message
+- topic - the [topic](https://developer.apple.com/library/archive/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/CommunicatingwithAPNs.html#//apple_ref/doc/uid/TP40008194-CH11-SW1) of the remote notification, which is typically the bundle ID for your ap
+- sound - sound of the alerting message
+
+
+## Test environment
 
 1. download iOS certificate in *PEM* format
 2. create environment variable __APPLE_PUSH_CERTIFICATE__ with path to *PEM*
