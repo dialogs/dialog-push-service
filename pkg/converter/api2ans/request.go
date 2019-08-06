@@ -5,10 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dialogs/dialog-push-service/pkg/api"
@@ -222,32 +219,34 @@ func setAlertingPayload(payload *payload.Payload, alerting *api.AlertingPush, so
 
 func checkVoIPTopicByCert(topic string, cert *tls.Certificate) error {
 
-	topicsSrc, err := ans.GetOIDValue(cert, ans.OidVoIPTopics)
-	if err != nil {
-		return errors.Wrap(err, "read VoIP topics")
-	}
+	return nil // TODO failed to parse topics. unknown format
 
-	topicsList := make([]string, 0, len(topicsSrc))
-	for i := range topicsSrc {
-		values := strings.Split(string(topicsSrc[i]), ",")
-		for j := range values {
-			values[j] = strings.TrimSpace(values[j])
-		}
+	// topicsSrc, err := ans.GetOIDValue(cert, ans.OidVoIPTopics)
+	// if err != nil {
+	// 	return errors.Wrap(err, "read VoIP topics")
+	// }
 
-		topicsList = append(topicsList, values...)
-	}
+	// topicsList := make([]string, 0, len(topicsSrc))
+	// for i := range topicsSrc {
+	// 	values := strings.Split(string(topicsSrc[i]), ",")
+	// 	for j := range values {
+	// 		values[j] = strings.TrimSpace(values[j])
+	// 	}
 
-	// check config topic by certificate
-	if topic != "" {
-		l := len(topicsList)
-		index := sort.Search(l, func(i int) bool {
-			return strings.Compare(topicsList[i], topic) == 0
-		})
+	// 	topicsList = append(topicsList, values...)
+	// }
 
-		if index >= l {
-			return fmt.Errorf("invalid VoIP topic: '%s' (topics in certificate: %v)", topic, topicsList)
-		}
-	}
+	// // check config topic by certificate
+	// if topic != "" {
+	// 	l := len(topicsList)
+	// 	index := sort.Search(l, func(i int) bool {
+	// 		return strings.Compare(topicsList[i], topic) == 0
+	// 	})
 
-	return nil
+	// 	if index >= l {
+	// 		return fmt.Errorf("invalid VoIP topic: '%s' (topics in certificate: %v)", topic, topicsList)
+	// 	}
+	// }
+
+	// return nil
 }
