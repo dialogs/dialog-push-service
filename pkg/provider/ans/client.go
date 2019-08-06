@@ -1,10 +1,13 @@
 package ans
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/asn1"
+	"fmt"
+	"io"
 	"net/url"
 
 	"github.com/pkg/errors"
@@ -103,6 +106,72 @@ func GetOIDValue(cert *tls.Certificate, oid asn1.ObjectIdentifier) ([][]byte, er
 				if e.Id.Equal(oid) {
 					retval = append(retval, e.Value)
 				}
+			}
+		}
+	}
+
+	return retval, nil
+}
+
+// Returns topics from certificate extension value
+// Binary data format:
+// <block start=0x30> <block size=0xD> <value start=0xc> <value size=0x2> <value byte 1> <value byte 2>
+// <block start=0x30> <block size=0x3> <value start=0xc> <value size=0x1> <value byte 1>
+// <value start=0xc> <value size=0x2> <value byte 1> <value byte 2>
+func GetTopics(src []byte) ([]string, error) {
+
+	type State int
+	const (
+		BlockStart uint8 = 0x30
+		ValueStart uint8 = 0xc
+
+		NextBlock State = iota
+		ReadBlockSize
+		ReadValueSize
+		ReadValue
+	)
+
+	var (
+		r         = bytes.NewReader(src)
+		value     = bytes.NewBuffer(nil)
+		state     = NextBlock
+		retval    = make([]string, 0)
+		valueSize byte
+	)
+
+	for {
+		b, err := r.ReadByte()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		switch state {
+		case NextBlock:
+			if b == BlockStart {
+				state = ReadBlockSize
+			} else if b == ValueStart {
+				state = ReadValueSize
+			} else {
+				return nil, fmt.Errorf("topic: unknown block ID: %v", b)
+			}
+
+		case ReadBlockSize:
+			state = NextBlock
+
+		case ReadValueSize:
+			valueSize = b
+			state = ReadValue
+
+		case ReadValue:
+			value.WriteByte(b)
+			valueSize--
+
+			if valueSize == 0 {
+				retval = append(retval, value.String())
+				value.Reset()
+				state = NextBlock
 			}
 		}
 	}
