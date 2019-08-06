@@ -107,7 +107,7 @@ func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (*ap
 				retval.ProjectInvalidations[projectID] = deviceList
 				retvalMu.Unlock()
 
-				l.Error("get worker", zap.Error(err))
+				l.Error("get worker", zap.Error(err), zap.String("project-id", projectID))
 				continue
 			}
 
