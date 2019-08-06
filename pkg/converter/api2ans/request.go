@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -240,12 +239,14 @@ func checkVoIPTopicByCert(topic string, cert *tls.Certificate) error {
 
 	// check config topic by certificate
 	if topic != "" {
-		l := len(topicList)
-		index := sort.Search(l, func(i int) bool {
-			return strings.Compare(topicList[i], topic) == 0
-		})
+		var exist bool
+		for i := range topicList {
+			if strings.Compare(topicList[i], topic) == 0 {
+				exist = true
+			}
+		}
 
-		if index >= l {
+		if !exist {
 			return fmt.Errorf("invalid VoIP topic: '%s' (topics in certificate: %v)", topic, topicList)
 		}
 	}
