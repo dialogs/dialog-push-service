@@ -22,12 +22,12 @@ RUN GO111MODULE=on \
     -X ${PROJECT}/pkg/info.Version=${RELEASE} \
     -X ${PROJECT}/pkg/info.GoVersion=$(go version| sed -e 's/ /_/g') \
     -X ${PROJECT}/pkg/info.BuildDate=$(date -u '+%Y-%m-%d_%H:%M:%S')" \
-    -o /dialog-push-service main.go
+    -o /push-server main.go
 
 FROM debian:stretch-slim
 
 WORKDIR /
 
-COPY --from=builder /dialog-push-service /dialog-push-service
+COPY --from=builder /push-server /push-server
 
-CMD ["/dialog-push-service"]
+CMD ["/push-server"]

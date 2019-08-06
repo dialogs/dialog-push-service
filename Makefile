@@ -116,7 +116,7 @@ docker-run:
 	-p "8011:8011" \
 	-v "$(shell pwd)/example.yaml:/var/config/example.yaml" \
 	${IMAGE} \
-	sh -c "/dialog-push-service -c /var/config/example.yaml"
+	sh -c "/push-server -c /var/config/example.yaml"
 
 .PHONY: scala-publish-local
 scala-publish-local:
