@@ -16,7 +16,7 @@ import (
 // https://github.com/SilentCircle/apns_tools/blob/master/FakeAppleWWDRCA.cfg
 var (
 	OidPushDevelop = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 1})
-	OidVoIPTopics  = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 4})
+	OidVoIPTopics  = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 6})
 	OidVoIP        = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 5})
 )
 
