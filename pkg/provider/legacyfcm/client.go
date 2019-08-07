@@ -52,17 +52,15 @@ func (c *Client) Send(ctx context.Context, message *Request) (retval *Response, 
 		statusCode, retval, err = c.send(ctx, message)
 		if err != nil {
 			existTries := try < sendTries-1
-			if err == context.DeadlineExceeded && existTries {
+			if existTries &&
+				(statusCode == http.StatusInternalServerError || err == context.DeadlineExceeded) {
 				continue
 			}
 
 			return nil, err
 		}
 
-		if statusCode == http.StatusInternalServerError {
-			continue
-
-		} else if statusCode == http.StatusOK && len(retval.Results) > 0 {
+		if statusCode == http.StatusOK && len(retval.Results) > 0 {
 
 			var retry bool
 			for _, item := range retval.Results {
