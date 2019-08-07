@@ -66,8 +66,9 @@ func TestConfig(t *testing.T) {
 			},
 			LegacyFcm: []*legacyfcm.Config{
 				{
-					ServerKey: fcmKey,
-					SendTries: 10,
+					ServerKey:   fcmKey,
+					SendTries:   10,
+					SendTimeout: time.Second,
 					Config: &worker.Config{
 						ProjectID:     "p-2",
 						NopMode:       true,

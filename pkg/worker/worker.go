@@ -2,18 +2,18 @@ package worker
 
 import (
 	"context"
-	"errors"
 	"runtime"
 
 	"github.com/dialogs/dialog-push-service/pkg/converter"
 	"github.com/dialogs/dialog-push-service/pkg/metric"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
 var (
-	ErrInvalidDeviceToken   = errors.New("empty device token")
-	ErrUnknownResponseError = errors.New("unknown response error")
-	ErrInvalidOutDataType   = errors.New("invalid out data type")
+	ErrEmptyToken           = NewResponseError(ErrorCodeBadDeviceToken, errors.New("empty device token"))
+	ErrUnknownResponseError = NewResponseError(ErrorCodeUnknown, errors.New("unknown response error"))
+	ErrInvalidOutDataType   = NewResponseError(ErrorCodeBadRequest, errors.New("invalid out data type"))
 )
 
 type FnNewNotification func() interface{}
@@ -91,11 +91,11 @@ func (w *Worker) Send(ctx context.Context, req *Request) <-chan *Response {
 		defer close(ch)
 
 		if len(req.Devices) == 0 {
-			w.logger.Error(ErrInvalidDeviceToken.Error())
+			w.logger.Error(ErrEmptyToken.Error())
 
 			ch <- &Response{
 				ProjectID: w.projectID,
-				Error:     ErrInvalidDeviceToken,
+				Error:     ErrEmptyToken,
 			}
 			return
 		}
@@ -118,7 +118,11 @@ func (w *Worker) Send(ctx context.Context, req *Request) <-chan *Response {
 			case <-ctx.Done():
 				return
 			default:
-				if err != nil {
+				if resp.DeviceToken == "" {
+					l.Error("empty token")
+					resp.Error = ErrEmptyToken
+
+				} else if err != nil {
 					// convert error
 					l.Error("convert incoming message", zap.Error(err))
 					resp.Error = err

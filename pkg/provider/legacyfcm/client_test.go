@@ -1,11 +1,11 @@
 package legacyfcm
 
 import (
-	"errors"
+	"context"
 	"testing"
+	"time"
 
 	"github.com/dialogs/dialog-push-service/pkg/test"
-	"github.com/edganiukov/fcm"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,29 +27,28 @@ func TestSendOk(t *testing.T) {
 
 	token := getDeviceToken(t)
 
-	req := &fcm.Message{
-		Token: token,
+	req := &Request{
+		To: token,
 	}
 
 	client := getClient(t)
-	resp, err := client.Send(req)
+	resp, err := client.Send(context.Background(), req)
 	require.NoError(t, err)
 
 	require.True(t, resp.MulticastID > 0, resp.MulticastID)
 	require.NotEmpty(t, resp.Results[0].MessageID)
 
 	require.Equal(t,
-		&fcm.Response{
-			MulticastID:  resp.MulticastID,
-			Success:      1,
-			Failure:      0,
-			CanonicalIDs: 0,
-			StatusCode:   200,
-			Results: []fcm.Result{
+		&Response{
+			MulticastID: resp.MulticastID,
+			Success:     1,
+			Failure:     0,
+			StatusCode:  200,
+			Results: []*ResponseResult{
 				{
 					MessageID:      resp.Results[0].MessageID,
 					RegistrationID: "",
-					Error:          error(nil),
+					Error:          "",
 				},
 			},
 		},
@@ -58,28 +57,27 @@ func TestSendOk(t *testing.T) {
 
 func TestSendError(t *testing.T) {
 
-	req := &fcm.Message{
-		Token: "-",
+	req := &Request{
+		To: "",
 	}
 
 	client := getClient(t)
-	resp, err := client.Send(req)
+	resp, err := client.Send(context.Background(), req)
 	require.NoError(t, err)
 
 	require.True(t, resp.MulticastID > 0, resp.MulticastID)
 
 	require.Equal(t,
-		&fcm.Response{
-			MulticastID:  resp.MulticastID,
-			Success:      0,
-			Failure:      1,
-			CanonicalIDs: 0,
-			StatusCode:   200,
-			Results: []fcm.Result{
+		&Response{
+			MulticastID: resp.MulticastID,
+			Success:     0,
+			Failure:     1,
+			StatusCode:  200,
+			Results: []*ResponseResult{
 				{
 					MessageID:      "",
 					RegistrationID: "",
-					Error:          errors.New("invalid registration token"),
+					Error:          ErrorCodeMissingRegistration,
 				},
 			},
 		},
@@ -91,7 +89,7 @@ func getClient(t *testing.T) *Client {
 
 	key := getAccountKey(t)
 
-	client, err := New(key, 2)
+	client, err := New(key, 2, time.Second)
 	require.NoError(t, err)
 
 	return client

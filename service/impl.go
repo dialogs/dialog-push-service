@@ -104,7 +104,7 @@ func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (*ap
 			w, err := i.getWorker(projectID)
 			if err != nil {
 				retvalMu.Lock()
-				retval.ProjectInvalidations[projectID] = deviceList
+				retval.ProjectInvalidations[projectID] = &api.DeviceIdList{}
 				retvalMu.Unlock()
 
 				l.Error("get worker", zap.Error(err), zap.String("project-id", projectID))
@@ -122,9 +122,15 @@ func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (*ap
 				}
 
 				invalidations := &api.DeviceIdList{}
+
 				for res := range projectWorker.Send(ctx, req) {
+
 					if res.Error != nil {
-						invalidations.DeviceIds = append(invalidations.DeviceIds, res.DeviceToken)
+						workerErr, ok := res.Error.(*worker.ResponseError)
+
+						if ok && (workerErr.Code == worker.ErrorCodeBadDeviceToken) {
+							invalidations.DeviceIds = append(invalidations.DeviceIds, res.DeviceToken)
+						}
 					}
 				}
 

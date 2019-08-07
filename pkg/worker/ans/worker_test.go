@@ -43,7 +43,7 @@ func TestWokerSendErrInvalidDeviceToken(t *testing.T) {
 	require.Equal(t,
 		&worker.Response{
 			ProjectID: w.ProjectID(),
-			Error:     worker.ErrInvalidDeviceToken,
+			Error:     worker.ErrEmptyToken,
 		},
 		<-chOut)
 
@@ -137,13 +137,17 @@ func TestWokerSendOk(t *testing.T) {
 		},
 		<-chOut)
 
+	apnsError := errors.New("400 BadDeviceToken")
+	res := <-chOut
+	require.Equal(t, apnsError, res.Error.(*worker.ResponseError).Err())
+	require.Equal(t, worker.NewResponseErrorBadDeviceToken(apnsError), res.Error)
 	require.Equal(t,
 		&worker.Response{
 			ProjectID:   w.ProjectID(),
 			DeviceToken: "token2",
-			Error:       errors.New("400 BadDeviceToken"),
+			Error:       worker.NewResponseErrorBadDeviceToken(apnsError),
 		},
-		<-chOut)
+		res)
 
 	require.Equal(t,
 		&worker.Response{

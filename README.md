@@ -30,6 +30,7 @@ google:
   - project-id: <string>
     key: <string>
     retries: <number>
+    send-timeout: <string>
     nop-mode: <boolean>
     workers: <number>
     converter-kind: <string>
@@ -40,6 +41,7 @@ properties:
 - project-id - identificator of the provider
 - [key](https://firebase.google.com/docs/cloud-messaging/auth-server#authorize_legacy_protocol_send_requests)
 - retries - count retries by server error
+- send-timeout - time duration. Example: 1s, 2m
 - nop-mode - if the option is set to true, the message will not be sent
 - workers - count workers for sending. By default the value is equal count of processors.
 - converter-kind - kind of the converter. By default is equal 'api'(protobuf message to provider message). Variants: api, binary

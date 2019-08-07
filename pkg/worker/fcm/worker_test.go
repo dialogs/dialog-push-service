@@ -43,7 +43,7 @@ func TestWokerSendErrInvalidDeviceToken(t *testing.T) {
 	require.Equal(t,
 		&worker.Response{
 			ProjectID: w.ProjectID(),
-			Error:     worker.ErrInvalidDeviceToken,
+			Error:     worker.ErrEmptyToken,
 		},
 		<-chOut)
 
@@ -137,15 +137,11 @@ func TestWokerSendOk(t *testing.T) {
 		},
 		<-chOut)
 
-	require.Equal(t,
-		&worker.Response{
-			ProjectID:   w.ProjectID(),
-			DeviceToken: "token2",
-			Error: &fcm.SendError{
-				Code:    400,
-				Message: `The registration token is not a valid FCM registration token`,
-				Status:  "INVALID_ARGUMENT",
-				Details: json.RawMessage([]byte(`[
+	fcmError := &fcm.SendError{
+		Code:    400,
+		Message: `The registration token is not a valid FCM registration token`,
+		Status:  "INVALID_ARGUMENT",
+		Details: json.RawMessage([]byte(`[
       {
         "@type": "type.googleapis.com/google.firebase.fcm.v1.FcmError",
         "errorCode": "INVALID_ARGUMENT"
@@ -159,10 +155,18 @@ func TestWokerSendOk(t *testing.T) {
           }
         ]
       }
-    ]`)),
-			},
+    ]`))}
+
+	res := <-chOut
+	require.Equal(t, fcmError, res.Error.(*worker.ResponseError).Err())
+	require.Equal(t, worker.NewResponseErrorBadDeviceToken(fcmError), res.Error)
+	require.Equal(t,
+		&worker.Response{
+			ProjectID:   w.ProjectID(),
+			DeviceToken: "token2",
+			Error:       worker.NewResponseErrorBadDeviceToken(fcmError),
 		},
-		<-chOut)
+		res)
 
 	require.Equal(t,
 		&worker.Response{
@@ -173,6 +177,52 @@ func TestWokerSendOk(t *testing.T) {
 
 	_, ok := <-chOut
 	require.False(t, ok)
+}
+
+func TestGetStringValueFromJSON(t *testing.T) {
+
+	require.Equal(t,
+		[]string{},
+		getStringValueFromJSON(
+			[]byte(""),
+			"token"))
+
+	require.Equal(t,
+		[]string{"value2"},
+		getStringValueFromJSON(
+			[]byte(`{"token1": "value1", "token2": "value2"}`),
+			"token2"))
+
+	const src = `[
+      {
+        "@type": "type.googleapis.com/google.firebase.fcm.v1.FcmError",
+        "errorCode": "INVALID_ARGUMENT"
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.BadRequest",
+        "fieldViolations": [
+          {
+            "field": "message.token",
+            "description": "The registration token is not a valid FCM registration token"
+          }
+        ]
+      }
+	]`
+
+	require.Equal(t,
+		[]string{"message.token"},
+		getStringValueFromJSON(
+			[]byte(src),
+			"field"))
+
+	require.Equal(t,
+		[]string{
+			"type.googleapis.com/google.firebase.fcm.v1.FcmError",
+			"type.googleapis.com/google.rpc.BadRequest",
+		},
+		getStringValueFromJSON(
+			[]byte(src),
+			"@type"))
 }
 
 func getLogger(t *testing.T) *zap.Logger {

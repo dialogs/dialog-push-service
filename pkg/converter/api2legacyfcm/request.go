@@ -6,7 +6,7 @@ import (
 
 	"github.com/dialogs/dialog-push-service/pkg/api"
 	"github.com/dialogs/dialog-push-service/pkg/converter"
-	"github.com/edganiukov/fcm"
+	"github.com/dialogs/dialog-push-service/pkg/provider/legacyfcm"
 )
 
 type Request struct {
@@ -28,7 +28,7 @@ func (r *Request) Convert(in interface{}, out interface{}) error {
 		return err
 	}
 
-	req, ok := out.(*fcm.Message)
+	req, ok := out.(*legacyfcm.Request)
 	if !ok {
 		return converter.ErrInvalidOutgoingDataType
 	}
@@ -45,6 +45,9 @@ func (r *Request) Convert(in interface{}, out interface{}) error {
 
 	} else if alerting := body.GetAlertingPush(); alerting != nil {
 		err = r.serAlertingPush(req, alerting)
+
+	} else if silent := body.GetSilentPush(); silent != nil {
+		// ignoring
 
 	} else {
 		err = converter.ErrorByIncomingMessage(body)
@@ -70,7 +73,7 @@ func (r *Request) Convert(in interface{}, out interface{}) error {
 	return nil
 }
 
-func (r *Request) setVoIPPayload(req *fcm.Message, src *api.VoipPush) {
+func (r *Request) setVoIPPayload(req *legacyfcm.Request, src *api.VoipPush) {
 
 	// VoIP pushes are not supported, sending silent push instead
 
@@ -99,10 +102,10 @@ func (r *Request) setVoIPPayload(req *fcm.Message, src *api.VoipPush) {
 	req.Data["video"] = src.GetVideo()
 }
 
-func (r *Request) serEncryptedPush(req *fcm.Message, src *api.EncryptedPush) error {
+func (r *Request) serEncryptedPush(req *legacyfcm.Request, src *api.EncryptedPush) error {
 
 	if public := src.GetPublicAlertingPush(); public != nil {
-		fromAlertingPush(req.Notification, public)
+		fromAlertingPush(req, public)
 	}
 
 	encryptedData := src.GetEncryptedData()
@@ -120,13 +123,13 @@ func (r *Request) serEncryptedPush(req *fcm.Message, src *api.EncryptedPush) err
 	return nil
 }
 
-func (r *Request) serAlertingPush(req *fcm.Message, src *api.AlertingPush) error {
+func (r *Request) serAlertingPush(req *legacyfcm.Request, src *api.AlertingPush) error {
 
 	if !r.allowAlerts {
 		return converter.ErrNotSupportedAlertPush
 	}
 
-	fromAlertingPush(req.Notification, src)
+	fromAlertingPush(req, src)
 
 	if mid := src.Mid; mid != nil {
 		req.Data["mid"] = mid.Value
@@ -139,12 +142,16 @@ func (r *Request) serAlertingPush(req *fcm.Message, src *api.AlertingPush) error
 	return nil
 }
 
-func fromAlertingPush(req *fcm.Notification, src *api.AlertingPush) {
+func fromAlertingPush(req *legacyfcm.Request, src *api.AlertingPush) {
 
-	req.Title = src.GetSimpleAlertTitle()
-	req.Body = src.GetSimpleAlertBody()
-
-	if badge := src.GetBadge(); badge > 0 {
-		req.Badge = strconv.Itoa(int(badge))
+	if req.Notification == nil {
+		req.Notification = &legacyfcm.Notification{}
 	}
+
+	n := req.Notification
+
+	n.Title = src.GetSimpleAlertTitle()
+	n.Body = src.GetSimpleAlertBody()
+
+	// src.GetBadge() is not supported
 }

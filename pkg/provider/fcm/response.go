@@ -7,10 +7,11 @@ import (
 )
 
 const (
-	ErrorCodeUnregistered ErrorCode = "UNREGISTERED"
-	ErrorCodeUnavailable  ErrorCode = "UNAVAILABLE"
-	ErrorCodeInternal     ErrorCode = "INTERNAL"
-	ErrorCodeUnspecified  ErrorCode = "UNSPECIFIED_ERROR"
+	ErrorCodeUnregistered    ErrorCode = "UNREGISTERED"
+	ErrorCodeUnavailable     ErrorCode = "UNAVAILABLE"
+	ErrorCodeInternal        ErrorCode = "INTERNAL"
+	ErrorCodeUnspecified     ErrorCode = "UNSPECIFIED_ERROR"
+	ErrorCodeInvalidArgument ErrorCode = "INVALID_ARGUMENT"
 )
 
 // ErrorCode values

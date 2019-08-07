@@ -48,6 +48,11 @@ endif
 	easyjson -all ${$@_target}/request.go
 	easyjson -all ${$@_target}/response.go
 
+	$(eval $@_target := pkg/provider/legacyfcm)
+	rm -f ${$@_target}/*_easyjson.go
+	easyjson -all ${$@_target}/request.go
+	easyjson -all ${$@_target}/response.go
+
 .PHONY: proto-golang
 proto-golang:
 	$(eval $@_target :=pkg/api)

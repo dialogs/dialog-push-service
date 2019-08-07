@@ -7,6 +7,7 @@ import (
 
 	"github.com/dialogs/dialog-push-service/pkg/converter"
 	"github.com/dialogs/dialog-push-service/pkg/metric"
+	"github.com/dialogs/dialog-push-service/pkg/provider/legacyfcm"
 	"github.com/dialogs/dialog-push-service/pkg/test"
 	"github.com/dialogs/dialog-push-service/pkg/worker"
 	"github.com/spf13/viper"
@@ -42,7 +43,7 @@ func TestWokerSendErrInvalidDeviceToken(t *testing.T) {
 	require.Equal(t,
 		&worker.Response{
 			ProjectID: w.ProjectID(),
-			Error:     worker.ErrInvalidDeviceToken,
+			Error:     worker.ErrEmptyToken,
 		},
 		<-chOut)
 
@@ -136,13 +137,18 @@ func TestWokerSendOk(t *testing.T) {
 		},
 		<-chOut)
 
+	fcmError := errors.New(legacyfcm.ErrorCodeInvalidRegistration)
+
+	res := <-chOut
+	require.Equal(t, fcmError, res.Error.(*worker.ResponseError).Err())
+	require.Equal(t, worker.NewResponseErrorBadDeviceToken(fcmError), res.Error)
 	require.Equal(t,
 		&worker.Response{
 			ProjectID:   w.ProjectID(),
 			DeviceToken: "token2",
-			Error:       errors.New("invalid registration token"),
+			Error:       worker.NewResponseErrorBadDeviceToken(fcmError),
 		},
-		<-chOut)
+		res)
 
 	require.Equal(t,
 		&worker.Response{

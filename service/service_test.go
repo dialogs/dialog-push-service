@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -20,6 +21,10 @@ import (
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
 )
+
+func init() {
+	log.SetFlags(log.Llongfile | log.Ltime | log.Lmicroseconds)
+}
 
 func TestService(t *testing.T) {
 
@@ -136,7 +141,7 @@ func testPushStreamSuccess(t *testing.T, conn *grpc.ClientConn) {
 					"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", "token2"}},
 					"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", "token4"}},
 					"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", "token6"}},
-					"p-unknown": &api.DeviceIdList{DeviceIds: []string{"token7", android, ios, "token8"}},
+					"p-unknown": &api.DeviceIdList{},
 				},
 			},
 			res)
@@ -160,9 +165,10 @@ func testPushStreamInvalidIncomigData(t *testing.T, conn *grpc.ClientConn) {
 	for i := 0; i < 3; i++ {
 		require.NoError(t, stream.Send(&api.Push{
 			Destinations: map[string]*api.DeviceIdList{
-				"p-fcm":    &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
-				"p-google": &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
-				"p-apple":  &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
+				"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
+				"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
+				"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
+				"p-unknown": &api.DeviceIdList{DeviceIds: []string{"", "-", android, ios, "token4"}},
 			},
 		}))
 
@@ -173,9 +179,10 @@ func testPushStreamInvalidIncomigData(t *testing.T, conn *grpc.ClientConn) {
 		require.Equal(t,
 			&api.Response{
 				ProjectInvalidations: map[string]*api.DeviceIdList{
-					"p-fcm":    &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
-					"p-google": &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
-					"p-apple":  &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
+					"p-fcm":     &api.DeviceIdList{},
+					"p-google":  &api.DeviceIdList{},
+					"p-apple":   &api.DeviceIdList{},
+					"p-unknown": &api.DeviceIdList{},
 				},
 			},
 			res)
@@ -188,13 +195,15 @@ func testSinglePushSuccess(t *testing.T, conn *grpc.ClientConn) {
 
 	android, ios, err := test.GetPushDevices()
 	require.NoError(t, err)
+	require.NotEmpty(t, ios)
+	require.NotEmpty(t, android)
 
 	res, err := client.SinglePush(context.Background(), &api.Push{
 		Destinations: map[string]*api.DeviceIdList{
-			"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
-			"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
-			"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
-			"p-unknown": &api.DeviceIdList{DeviceIds: []string{"token7", android, ios, "token8"}},
+			"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", android, "token1"}},
+			"p-google":  &api.DeviceIdList{DeviceIds: []string{"", "-", android, "token2"}},
+			"p-apple":   &api.DeviceIdList{DeviceIds: []string{"", "-", ios, "token3"}},
+			"p-unknown": &api.DeviceIdList{DeviceIds: []string{"", "-", android, ios, "token4"}},
 		},
 		Body: &api.PushBody{
 			Body: &api.PushBody_EncryptedPush{
@@ -209,10 +218,10 @@ func testSinglePushSuccess(t *testing.T, conn *grpc.ClientConn) {
 	require.Equal(t,
 		&api.Response{
 			ProjectInvalidations: map[string]*api.DeviceIdList{
-				"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", "token2"}},
-				"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", "token4"}},
-				"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", "token6"}},
-				"p-unknown": &api.DeviceIdList{DeviceIds: []string{"token7", android, ios, "token8"}},
+				"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", "token1"}},
+				"p-google":  &api.DeviceIdList{DeviceIds: []string{"", "-", "token2"}},
+				"p-apple":   &api.DeviceIdList{DeviceIds: []string{"", "-", "token3"}},
+				"p-unknown": &api.DeviceIdList{},
 			},
 		},
 		res)
@@ -227,9 +236,10 @@ func testSinglePushInvalidIncomigData(t *testing.T, conn *grpc.ClientConn) {
 
 	res, err := client.SinglePush(context.Background(), &api.Push{
 		Destinations: map[string]*api.DeviceIdList{
-			"p-fcm":    &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
-			"p-google": &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
-			"p-apple":  &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
+			"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
+			"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
+			"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
+			"p-unknown": &api.DeviceIdList{DeviceIds: []string{"token7", android, ios, "token8"}},
 		},
 	})
 
@@ -237,9 +247,10 @@ func testSinglePushInvalidIncomigData(t *testing.T, conn *grpc.ClientConn) {
 	require.Equal(t,
 		&api.Response{
 			ProjectInvalidations: map[string]*api.DeviceIdList{
-				"p-fcm":    &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
-				"p-google": &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
-				"p-apple":  &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
+				"p-fcm":     &api.DeviceIdList{},
+				"p-google":  &api.DeviceIdList{},
+				"p-apple":   &api.DeviceIdList{},
+				"p-unknown": &api.DeviceIdList{},
 			},
 		},
 		res)

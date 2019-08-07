@@ -85,7 +85,12 @@ func (w *Worker) sendNotification(ctx context.Context, token string, out interfa
 		return err
 
 	} else if answer.StatusCode != 200 {
-		return errors.New(strconv.Itoa(answer.StatusCode) + " " + answer.Reason)
+		err := errors.New(strconv.Itoa(answer.StatusCode) + " " + answer.Reason)
+		if answer.StatusCode == 400 && answer.Reason == "BadDeviceToken" {
+			return worker.NewResponseErrorBadDeviceToken(err)
+		}
+
+		return worker.NewResponseErrorFromAnswer(answer.StatusCode, err)
 	}
 
 	return nil

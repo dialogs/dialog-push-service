@@ -17,8 +17,6 @@ import (
 	"github.com/sideshow/apns2/payload"
 )
 
-var ErrIgnoringSilentPush = errors.New("ignoring silent push")
-
 type Request struct {
 	topic       string
 	sound       string
@@ -57,10 +55,6 @@ func (r *Request) Convert(in interface{}, out interface{}) error {
 		return converter.ErrInvalidOutgoingDataType
 	}
 
-	if silent := body.GetSilentPush(); silent != nil {
-		return ErrIgnoringSilentPush
-	}
-
 	payload := payload.NewPayload()
 	if voip := body.GetVoipPush(); voip != nil {
 		err = r.setVoIPPayload(payload, voip)
@@ -70,6 +64,9 @@ func (r *Request) Convert(in interface{}, out interface{}) error {
 
 	} else if encryped := body.GetEncryptedPush(); encryped != nil {
 		err = r.setEncryptedPayload(payload, encryped)
+
+	} else if silent := body.GetSilentPush(); silent != nil {
+		// ignoring
 
 	} else {
 		err = converter.ErrorByIncomingMessage(body)

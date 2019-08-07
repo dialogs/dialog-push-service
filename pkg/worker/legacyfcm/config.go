@@ -2,6 +2,7 @@ package legacyfcm
 
 import (
 	"strings"
+	"time"
 
 	"github.com/dialogs/dialog-push-service/pkg/converter"
 	"github.com/dialogs/dialog-push-service/pkg/converter/api2legacyfcm"
@@ -16,8 +17,9 @@ type Config struct {
 
 	// Server key:
 	// https://console.firebase.google.com/project/_/settings/cloudmessaging/
-	ServerKey string `mapstructure:"key"`
-	SendTries int    `mapstructure:"retries"`
+	ServerKey   string        `mapstructure:"key"`
+	SendTries   int           `mapstructure:"retries"`
+	SendTimeout time.Duration `mapstructure:"send-timeout"`
 }
 
 func NewConfig(src *viper.Viper) (*Config, error) {
@@ -48,6 +50,10 @@ func NewConfig(src *viper.Viper) (*Config, error) {
 
 	if strings.TrimSpace(c.ServerKey) == "" {
 		return nil, errors.New("invalid server key")
+	}
+
+	if c.SendTimeout <= 0 {
+		c.SendTimeout = time.Second
 	}
 
 	return c, nil

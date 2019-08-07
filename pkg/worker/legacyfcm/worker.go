@@ -3,6 +3,7 @@ package legacyfcm
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"github.com/dialogs/dialog-push-service/pkg/converter"
 	"github.com/dialogs/dialog-push-service/pkg/converter/api2legacyfcm"
@@ -10,11 +11,8 @@ import (
 	"github.com/dialogs/dialog-push-service/pkg/metric"
 	"github.com/dialogs/dialog-push-service/pkg/provider/legacyfcm"
 	"github.com/dialogs/dialog-push-service/pkg/worker"
-	"github.com/edganiukov/fcm"
 	"go.uber.org/zap"
 )
-
-var ErrUnknownResponseError = errors.New("unknown response error")
 
 type Worker struct {
 	*worker.Worker
@@ -27,7 +25,7 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 		cfg.SendTries = 2
 	}
 
-	provider, err := legacyfcm.New(cfg.ServerKey, cfg.SendTries)
+	provider, err := legacyfcm.New(cfg.ServerKey, cfg.SendTries, cfg.SendTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -64,28 +62,40 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 }
 
 func (w *Worker) newNotification() interface{} {
-	return &fcm.Message{}
+	return &legacyfcm.Request{}
 }
 
 func (w *Worker) sendNotification(ctx context.Context, token string, out interface{}) error {
 
-	req, ok := out.(*fcm.Message)
+	req, ok := out.(*legacyfcm.Request)
 	if !ok {
 		return worker.ErrInvalidOutDataType
 	}
 
-	req.Token = token
+	req.To = token
 
-	answer, err := w.provider.Send(req)
+	answer, err := w.provider.Send(ctx, req)
 	if err != nil {
 		return err
 
 	} else if answer.Success == 0 {
 		var answerError error
 		if len(answer.Results) > 0 {
-			answerError = answer.Results[0].Error
+			var errCode string
+			for _, res := range answer.Results {
+				errCode = res.Error
+			}
+
+			if errCode == legacyfcm.ErrorCodeInvalidRegistration ||
+				errCode == legacyfcm.ErrorCodeMissingRegistration {
+
+				return worker.NewResponseErrorBadDeviceToken(errors.New(errCode))
+			}
+
+			answerError = errors.New(strconv.Itoa(answer.StatusCode) + " " + errCode)
+
 		} else {
-			answerError = ErrUnknownResponseError
+			answerError = worker.ErrUnknownResponseError
 		}
 
 		return answerError

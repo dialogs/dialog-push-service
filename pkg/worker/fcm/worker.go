@@ -1,7 +1,10 @@
 package fcm
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"io/ioutil"
 	"time"
 
@@ -88,9 +91,79 @@ func (w *Worker) sendNotification(ctx context.Context, token string, out interfa
 		return err
 
 	} else if answer.Error != nil {
+		if answer.Error.Code == 400 && answer.Error.Status == fcm.ErrorCodeInvalidArgument {
+
+			fields := getStringValueFromJSON(answer.Error.Details, "field")
+			for i := range fields {
+				if fields[i] == "message.token" {
+					return worker.NewResponseErrorBadDeviceToken(answer.Error)
+				}
+			}
+		}
+
 		return answer.Error
 
 	}
 
 	return nil
+}
+
+func getStringValueFromJSON(src json.RawMessage, key string) []string {
+
+	type State int
+	const (
+		StateReadObject State = iota
+		StateReadKey
+		StateReadValue
+	)
+
+	state := StateReadObject
+	retval := make([]string, 0)
+	if len(src) == 0 {
+		return retval
+	}
+
+	r := bytes.NewReader(src)
+	dec := json.NewDecoder(r)
+
+	for {
+		token, err := dec.Token()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil
+		}
+
+		switch token.(type) {
+		case json.Delim:
+			delim := token.(json.Delim)
+			if delim == '{' {
+				state = StateReadKey
+			} else {
+				state = StateReadObject
+			}
+
+		case string:
+			val := token.(string)
+
+			if state == StateReadKey && val == key {
+				state = StateReadValue
+
+			} else if state == StateReadValue {
+				retval = append(retval, val)
+				state = StateReadKey
+
+			} else {
+				state = StateReadKey
+
+			}
+
+		default:
+			if state == StateReadValue {
+				state = StateReadKey
+			}
+		}
+	}
+
+	return retval
 }

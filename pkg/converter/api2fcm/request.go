@@ -47,6 +47,9 @@ func (r *Request) Convert(in interface{}, out interface{}) error {
 	} else if alerting := body.GetAlertingPush(); alerting != nil {
 		err = r.serAlertingPush(req, alerting)
 
+	} else if silent := body.GetSilentPush(); silent != nil {
+		// ignoring
+
 	} else {
 		err = converter.ErrorByIncomingMessage(body)
 
