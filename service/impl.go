@@ -58,14 +58,36 @@ func (i *impl) PushStream(stream api.Pushing_PushStreamServer) error {
 			return err
 		}
 
-		resp, err := i.sendPush(stream.Context(), push, l)
-		if err != nil {
-			return err
-		}
+		go func(taskLogger *zap.Logger) {
+			chOut, err := i.sendPush(stream.Context(), push, l)
+			if err != nil {
+				taskLogger.Error("failed to send push", zap.Error(err))
+				return
+			}
 
-		if err := stream.Send(resp); err != nil {
-			return err
-		}
+			for pushRes := range chOut {
+				if len(pushRes.InvalidationDevices) == 0 {
+					taskLogger.Info("empty invalidation devices list", zap.String("project id", pushRes.ProjectID))
+					continue
+				}
+
+				res := &api.Response{
+					ProjectInvalidations: map[string]*api.DeviceIdList{
+						pushRes.ProjectID: &api.DeviceIdList{
+							DeviceIds: pushRes.InvalidationDevices,
+						},
+					},
+				}
+
+				taskLogger.Info("send: start")
+				if err := stream.Send(res); err != nil {
+					l.Error("send: error", zap.Error(err))
+				} else {
+					taskLogger.Info("send: end")
+				}
+			}
+
+		}(l.With(zap.String("correlation id", push.CorrelationId)))
 	}
 }
 
@@ -73,10 +95,32 @@ func (i *impl) SinglePush(ctx context.Context, push *api.Push) (*api.Response, e
 
 	l := i.logger.With(zap.String("method", "single push"))
 
-	return i.sendPush(ctx, push, l)
+	chRes, err := i.sendPush(ctx, push, l)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &api.Response{
+		ProjectInvalidations: make(map[string]*api.DeviceIdList, len(push.Destinations)),
+	}
+
+	for pushRes := range chRes {
+		target, ok := res.ProjectInvalidations[pushRes.ProjectID]
+		if ok {
+			target.DeviceIds = append(target.DeviceIds, pushRes.InvalidationDevices...)
+		} else {
+			target = &api.DeviceIdList{
+				DeviceIds: pushRes.InvalidationDevices,
+			}
+		}
+
+		res.ProjectInvalidations[pushRes.ProjectID] = target
+	}
+
+	return res, nil
 }
 
-func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (*api.Response, error) {
+func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (<-chan *sendPushResult, error) {
 
 	l = l.With(zap.String("id", push.CorrelationId))
 
@@ -89,25 +133,24 @@ func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (*ap
 
 	peerMetric.Inc()
 
-	var (
-		retval = &api.Response{
-			ProjectInvalidations: make(map[string]*api.DeviceIdList, len(push.Destinations)),
-		}
-		retvalMu = sync.Mutex{}
-		wg       = sync.WaitGroup{}
-	)
+	chOut := make(chan *sendPushResult)
 
-	if len(push.Destinations) > 0 {
+	go func() {
+		defer func() { close(chOut) }()
+
+		if len(push.Destinations) == 0 {
+			return
+		}
+
+		wg := sync.WaitGroup{}
 
 		for projectID, deviceList := range push.Destinations {
 
 			w, err := i.getWorker(projectID)
 			if err != nil {
-				retvalMu.Lock()
-				retval.ProjectInvalidations[projectID] = &api.DeviceIdList{}
-				retvalMu.Unlock()
+				l.Error("get worker", zap.Error(err), zap.String("project id", projectID))
 
-				l.Error("get worker", zap.Error(err), zap.String("project-id", projectID))
+				chOut <- newSendPushResult(projectID)
 				continue
 			}
 
@@ -121,7 +164,7 @@ func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (*ap
 					Payload:       push.Body,
 				}
 
-				invalidations := &api.DeviceIdList{}
+				pushRes := newSendPushResult(projectWorker.ProjectID())
 
 				for res := range projectWorker.Send(ctx, req) {
 
@@ -129,22 +172,20 @@ func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (*ap
 						workerErr, ok := res.Error.(*worker.ResponseError)
 
 						if ok && (workerErr.Code == worker.ErrorCodeBadDeviceToken) {
-							invalidations.DeviceIds = append(invalidations.DeviceIds, res.DeviceToken)
+							pushRes.InvalidationDevices = append(pushRes.InvalidationDevices, res.DeviceToken)
 						}
 					}
 				}
 
-				retvalMu.Lock()
-				retval.ProjectInvalidations[projectWorker.ProjectID()] = invalidations
-				retvalMu.Unlock()
+				chOut <- pushRes
 
 			}(w, deviceList.GetDeviceIds())
 		}
-	}
 
-	wg.Wait()
+		wg.Wait()
+	}()
 
-	return retval, nil
+	return chOut, nil
 }
 
 func (i *impl) getWorker(projectID string) (worker.IWorker, error) {

@@ -85,6 +85,7 @@ func (w *Worker) Send(ctx context.Context, req *Request) <-chan *Response {
 
 	ch := make(chan *Response)
 	reserved := <-w.threads
+	// TODO: add wait timeout. if timeout is end, write to storage for retry
 
 	go func() {
 		defer func() { w.threads <- reserved }()

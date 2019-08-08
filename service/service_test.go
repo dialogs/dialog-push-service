@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -114,14 +115,18 @@ func testPushStreamSuccess(t *testing.T, conn *grpc.ClientConn) {
 		require.NoError(t, stream.CloseSend())
 	}()
 
-	for i := 0; i < 3; i++ {
+	destinations := map[string]*api.DeviceIdList{
+		"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
+		"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
+		"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
+		"p-unknown": &api.DeviceIdList{DeviceIds: []string{"token7", android, ios, "token8"}},
+	}
+
+	const CountSend = 3
+
+	for i := 0; i < CountSend; i++ {
 		require.NoError(t, stream.Send(&api.Push{
-			Destinations: map[string]*api.DeviceIdList{
-				"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
-				"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
-				"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
-				"p-unknown": &api.DeviceIdList{DeviceIds: []string{"token7", android, ios, "token8"}},
-			},
+			Destinations: destinations,
 			Body: &api.PushBody{
 				Body: &api.PushBody_EncryptedPush{
 					EncryptedPush: &api.EncryptedPush{
@@ -130,22 +135,48 @@ func testPushStreamSuccess(t *testing.T, conn *grpc.ClientConn) {
 				},
 			},
 		}))
+	}
 
+	countDestinations := len(destinations) - 1 // -1 - exclude results with unknown project
+
+	for i := 0; i < CountSend*countDestinations; i++ {
 		res, err := stream.Recv()
 		require.NoError(t, err)
 
-		require.NoError(t, err)
-		require.Equal(t,
-			&api.Response{
-				ProjectInvalidations: map[string]*api.DeviceIdList{
-					"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", "token2"}},
-					"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", "token4"}},
-					"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", "token6"}},
-					"p-unknown": &api.DeviceIdList{},
-				},
-			},
-			res)
+		for projectID := range res.ProjectInvalidations {
+			switch projectID {
+			case "p-fcm":
+				require.Equal(t,
+					&api.Response{
+						ProjectInvalidations: map[string]*api.DeviceIdList{
+							"p-fcm": &api.DeviceIdList{DeviceIds: []string{"token1", "token2"}},
+						},
+					},
+					res)
+
+			case "p-google":
+				require.Equal(t,
+					&api.Response{
+						ProjectInvalidations: map[string]*api.DeviceIdList{
+							"p-google": &api.DeviceIdList{DeviceIds: []string{"token3", "token4"}},
+						},
+					},
+					res)
+			case "p-apple":
+				require.Equal(t,
+					&api.Response{
+						ProjectInvalidations: map[string]*api.DeviceIdList{
+							"p-apple": &api.DeviceIdList{DeviceIds: []string{"token5", "token6"}},
+						},
+					},
+					res)
+			default:
+				t.Fatal("invalid project" + projectID)
+			}
+		}
 	}
+
+	checkStreamEnd(t, stream)
 }
 
 func testPushStreamInvalidIncomigData(t *testing.T, conn *grpc.ClientConn) {
@@ -163,30 +194,19 @@ func testPushStreamInvalidIncomigData(t *testing.T, conn *grpc.ClientConn) {
 	}()
 
 	for i := 0; i < 3; i++ {
-		require.NoError(t, stream.Send(&api.Push{
+		push := &api.Push{
 			Destinations: map[string]*api.DeviceIdList{
 				"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
 				"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
 				"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
 				"p-unknown": &api.DeviceIdList{DeviceIds: []string{"", "-", android, ios, "token4"}},
 			},
-		}))
+		}
 
-		res, err := stream.Recv()
-		require.NoError(t, err)
-
-		require.NoError(t, err)
-		require.Equal(t,
-			&api.Response{
-				ProjectInvalidations: map[string]*api.DeviceIdList{
-					"p-fcm":     &api.DeviceIdList{},
-					"p-google":  &api.DeviceIdList{},
-					"p-apple":   &api.DeviceIdList{},
-					"p-unknown": &api.DeviceIdList{},
-				},
-			},
-			res)
+		require.NoError(t, stream.Send(push))
 	}
+
+	checkStreamEnd(t, stream)
 }
 
 func testSinglePushSuccess(t *testing.T, conn *grpc.ClientConn) {
@@ -327,4 +347,29 @@ func getLogger(t *testing.T) *zap.Logger {
 	require.NoError(t, err)
 
 	return logger
+}
+
+func checkStreamEnd(t *testing.T, stream api.Pushing_PushStreamClient) {
+	t.Helper()
+
+	ch := make(chan error)
+
+	select {
+	case <-time.After(time.Second):
+		// test: ok
+		require.NoError(t, stream.CloseSend())
+
+	case <-func() <-chan error {
+		go func() {
+			res, err := stream.Recv()
+			require.Nil(t, res)
+			ch <- err
+		}()
+		return ch
+	}():
+
+		t.Fatal("can't returns value")
+	}
+
+	require.Equal(t, io.EOF, <-ch)
 }
