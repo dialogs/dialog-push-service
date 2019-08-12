@@ -30,4 +30,10 @@ WORKDIR /
 
 COPY --from=builder /push-server /push-server
 
+RUN apt update -y
+RUN apt install -y ca-certificates
+RUN update-ca-certificates
+
+USER 1000
+
 CMD ["/push-server"]
