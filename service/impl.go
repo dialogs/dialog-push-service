@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -13,6 +12,7 @@ import (
 	"github.com/dialogs/dialog-push-service/pkg/worker/ans"
 	"github.com/dialogs/dialog-push-service/pkg/worker/fcm"
 	"github.com/dialogs/dialog-push-service/pkg/worker/legacyfcm"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/peer"
 )
@@ -219,11 +219,26 @@ func getWorkers(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (map
 
 		switch c.(type) {
 		case *ans.Config:
-			w, err = ans.New(c.(*ans.Config), logger, svcMetric)
+			wConf := c.(*ans.Config)
+			w, err = ans.New(wConf, logger, svcMetric)
+			if err != nil {
+				err = errors.Wrap(err, "project ID: "+wConf.ProjectID)
+			}
+
 		case *legacyfcm.Config:
-			w, err = legacyfcm.New(c.(*legacyfcm.Config), logger, svcMetric)
+			wConf := c.(*legacyfcm.Config)
+			w, err = legacyfcm.New(wConf, logger, svcMetric)
+			if err != nil {
+				err = errors.Wrap(err, "project ID: "+wConf.ProjectID)
+			}
+
 		case *fcm.Config:
-			w, err = fcm.New(c.(*fcm.Config), logger, svcMetric)
+			wConf := c.(*fcm.Config)
+			w, err = fcm.New(wConf, logger, svcMetric)
+			if err != nil {
+				err = errors.Wrap(err, "project ID: "+wConf.ProjectID)
+			}
+
 		default:
 			err = fmt.Errorf("unknown config type: %T", c)
 		}
