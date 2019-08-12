@@ -61,7 +61,7 @@ func New(
 		kind:               kind,
 		nopMode:            cfg.NopMode,
 		threads:            threads,
-		logger:             logger.With(zap.String("worker", kind.String())),
+		logger:             logger.With(zap.String("worker", kind.String()), zap.String("project ID", cfg.ProjectID)),
 		metric:             providerMetric,
 		reqConverter:       reqConverter,
 		fnNewNotification:  fnNewNotification,
