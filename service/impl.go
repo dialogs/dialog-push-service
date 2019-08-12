@@ -58,8 +58,8 @@ func (i *impl) PushStream(stream api.Pushing_PushStreamServer) error {
 			return err
 		}
 
-		go func(taskLogger *zap.Logger) {
-			chOut, err := i.sendPush(stream.Context(), push, l)
+		go func(taskLogger *zap.Logger, task *api.Push) {
+			chOut, err := i.sendPush(stream.Context(), task, l)
 			if err != nil {
 				taskLogger.Error("failed to send push", zap.Error(err))
 				return
@@ -87,7 +87,7 @@ func (i *impl) PushStream(stream api.Pushing_PushStreamServer) error {
 				}
 			}
 
-		}(l.With(zap.String("correlation id", push.CorrelationId)))
+		}(l.With(zap.String("correlation id", push.CorrelationId)), push)
 	}
 }
 
