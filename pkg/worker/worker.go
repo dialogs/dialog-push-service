@@ -112,6 +112,7 @@ func (w *Worker) Send(ctx context.Context, req *Request) <-chan *Response {
 
 			// hide device token to hash
 			l := w.logger.With(
+				zap.String("token", token),
 				zap.String("token hash", TokenHash(token)),
 				zap.String("id", req.CorrelationID))
 
