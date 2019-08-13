@@ -28,7 +28,7 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 		return nil, err
 	}
 
-	provider, err := ans.NewFromPem(pem)
+	provider, err := ans.NewFromPem(pem, cfg.IsSandbox)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +54,7 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 	w.Worker, err = worker.New(
 		cfg.Config,
 		worker.KindApns,
+		provider.DevelopMode(),
 		logger,
 		svcMetric,
 		reqConverter,

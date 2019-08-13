@@ -34,6 +34,7 @@ type Worker struct {
 func New(
 	cfg *Config,
 	kind Kind,
+	developMode bool,
 	logger *zap.Logger,
 	svcMetric *metric.Service,
 	reqConverter converter.IRequestConverter,
@@ -56,12 +57,19 @@ func New(
 		return nil, err
 	}
 
+	l := logger.With(
+		zap.String("worker", kind.String()),
+		zap.String("project ID", cfg.ProjectID))
+	if developMode {
+		l = l.With(zap.Bool("develop", developMode))
+	}
+
 	return &Worker{
 		projectID:          cfg.ProjectID,
 		kind:               kind,
 		nopMode:            cfg.NopMode,
 		threads:            threads,
-		logger:             logger.With(zap.String("worker", kind.String()), zap.String("project ID", cfg.ProjectID)),
+		logger:             l,
 		metric:             providerMetric,
 		reqConverter:       reqConverter,
 		fnNewNotification:  fnNewNotification,
@@ -110,10 +118,15 @@ func (w *Worker) Send(ctx context.Context, req *Request) <-chan *Response {
 				DeviceToken: token,
 			}
 
-			// hide device token to hash
+			// hide device token
+			tokenInfo := ""
+			tokenPartLen := len(token) / 3
+			if tokenPartLen > 0 {
+				tokenInfo = token[:tokenPartLen] + "..." + token[len(token)-tokenPartLen:]
+			}
+
 			l := w.logger.With(
-				zap.String("token", token),
-				zap.String("token hash", TokenHash(token)),
+				zap.String("token", tokenInfo),
 				zap.String("id", req.CorrelationID))
 
 			select {

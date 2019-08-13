@@ -48,6 +48,7 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 	w.Worker, err = worker.New(
 		cfg.Config,
 		worker.KindFcmLegacy,
+		false,
 		logger,
 		svcMetric,
 		reqConverter,

@@ -18,24 +18,30 @@ import (
 // https://images.apple.com/certificateauthority/pdf/Apple_WWDR_CPS_v1.20.pdf
 // https://github.com/SilentCircle/apns_tools/blob/master/FakeAppleWWDRCA.cfg
 var (
-	OidPushDevelop = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 1})
-	OidVoIPTopics  = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 6})
-	OidVoIP        = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 5})
+	OidPushDevelop    = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 1})
+	OidPushProduction = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 2})
+	OidVoIPTopics     = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 6})
+	OidVoIP           = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 5})
 )
 
 type Client struct {
 	native *apns2.Client
 }
 
-func New(certTLS *tls.Certificate) (*Client, error) {
+func New(certTLS *tls.Certificate, isSandbox bool) (*Client, error) {
 
-	isDevelopCert, err := ExistOID(certTLS, OidPushDevelop)
+	hasDevelopCert, err := ExistOID(certTLS, OidPushDevelop)
 	if err != nil {
-		return nil, errors.Wrap(err, "check certificate type")
+		return nil, errors.Wrap(err, "check develop certificate type")
+	}
+
+	hasProductionCert, err := ExistOID(certTLS, OidPushProduction)
+	if err != nil {
+		return nil, errors.Wrap(err, "check production certificate type")
 	}
 
 	native := apns2.NewClient(*certTLS)
-	if isDevelopCert {
+	if hasDevelopCert && (!hasProductionCert || isSandbox) {
 		native.Development()
 	} else {
 		native.Production()
@@ -46,18 +52,22 @@ func New(certTLS *tls.Certificate) (*Client, error) {
 	}, nil
 }
 
-func NewFromPem(pem []byte) (*Client, error) {
+func NewFromPem(pemData []byte, isSandbox bool) (*Client, error) {
 
-	certTLS, err := tls.X509KeyPair(pem, pem)
+	certTLS, err := tls.X509KeyPair(pemData, pemData)
 	if err != nil {
 		return nil, errors.Wrap(err, "read certificate")
 	}
 
-	return New(&certTLS)
+	return New(&certTLS, isSandbox)
 }
 
 func (c *Client) Certificate() tls.Certificate {
 	return c.native.Certificate
+}
+
+func (c *Client) DevelopMode() bool {
+	return c.native.Host == apns2.HostDevelopment
 }
 
 func (c *Client) Send(ctx context.Context, req *Request) (*Response, error) {

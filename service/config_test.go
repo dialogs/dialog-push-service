@@ -83,7 +83,8 @@ func TestConfig(t *testing.T) {
 			},
 			Ans: []*ans.Config{
 				{
-					PemFile: applePem,
+					PemFile:   applePem,
+					IsSandbox: true,
 					Config: &worker.Config{
 						ProjectID:     "p-3",
 						NopMode:       true,

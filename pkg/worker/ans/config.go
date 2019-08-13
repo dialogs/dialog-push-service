@@ -13,6 +13,7 @@ import (
 type Config struct {
 	*worker.Config `mapstructure:"-"`
 	APIConfig      *api2ans.Config `mapstructure:"-"`
+	IsSandbox      bool            `mapstructure:"sandbox"`
 
 	// Path to tls file in pem format
 	PemFile string `mapstructure:"pem"`

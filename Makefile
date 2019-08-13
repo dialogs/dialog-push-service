@@ -120,6 +120,10 @@ docker-run:
 	-p "8010:8010" \
 	-p "8011:8011" \
 	-v "$(shell pwd)/example.yaml:/var/config/example.yaml" \
+	-v "${HOME}/<...>.pem:/config/production-big.pem" \
+	-v "${HOME}/<...>.pem:/config/production-big-voip.pem" \
+	-v "${HOME}/<...>.pem:/config/production-ee.pem" \
+	-v "${HOME}/<...>.pem:/config/production-ee-voip.pem" \
 	${IMAGE} \
 	sh -c "/push-server -c /var/config/example.yaml"
 
