@@ -4,18 +4,19 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/ioutil"
 	"time"
 
-	"github.com/dialogs/dialog-push-service/pkg/converter"
-	"github.com/dialogs/dialog-push-service/pkg/converter/api2fcm"
-	"github.com/dialogs/dialog-push-service/pkg/converter/binary"
 	"github.com/dialogs/dialog-push-service/pkg/metric"
+	"github.com/dialogs/dialog-push-service/pkg/provider"
 	"github.com/dialogs/dialog-push-service/pkg/provider/fcm"
 	"github.com/dialogs/dialog-push-service/pkg/worker"
 	"go.uber.org/zap"
 )
+
+var ErrInvalidRequestType = errors.New("invalid fcm request type")
 
 type Worker struct {
 	*worker.Worker
@@ -37,20 +38,9 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 		return nil, err
 	}
 
-	provider, err := fcm.New(serviceAccount, cfg.SendTries, cfg.SendTimeout)
+	provider, err := fcm.New(serviceAccount, cfg.Sandbox, cfg.SendTries, cfg.SendTimeout)
 	if err != nil {
 		return nil, err
-	}
-
-	var reqConverter converter.IRequestConverter
-
-	switch cfg.ConverterKind {
-	case converter.KindApi:
-		reqConverter = api2fcm.NewRequestConverter(cfg.APIConfig)
-
-	case converter.KindBinary:
-		reqConverter = binary.NewRequestConverter()
-
 	}
 
 	w := &Worker{
@@ -60,11 +50,9 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 	w.Worker, err = worker.New(
 		cfg.Config,
 		worker.KindFcm,
-		false,
+		provider.Sandbox(),
 		logger,
 		svcMetric,
-		reqConverter,
-		w.newNotification,
 		w.sendNotification,
 	)
 	if err != nil {
@@ -74,18 +62,16 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 	return w, nil
 }
 
-func (w *Worker) newNotification() interface{} {
-	return &fcm.Request{}
+func (w *Worker) ExistVoIP() bool {
+	return false
 }
 
-func (w *Worker) sendNotification(ctx context.Context, token string, out interface{}) error {
+func (w *Worker) sendNotification(ctx context.Context, in provider.IRequest) error {
 
-	req, ok := out.(*fcm.Request)
-	if !ok {
-		return worker.ErrInvalidOutDataType
+	req, ok := in.(*fcm.Message)
+	if !ok || req == nil {
+		return ErrInvalidRequestType
 	}
-
-	req.Message.Token = token
 
 	answer, err := w.provider.Send(ctx, req)
 	if err != nil {

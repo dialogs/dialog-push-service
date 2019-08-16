@@ -1,4 +1,4 @@
-package converter
+package conversion
 
 import (
 	"bytes"
@@ -6,33 +6,16 @@ import (
 
 	"github.com/dialogs/dialog-push-service/pkg/api"
 	"github.com/gogo/protobuf/jsonpb"
-	"github.com/spf13/viper"
 	"google.golang.org/grpc/status"
 )
 
-func GetKindFromConfig(src *viper.Viper) Kind {
-	return KindByString(src.GetString("converter-kind"))
-}
-
-func GetAPIPushBody(in interface{}) (*api.PushBody, error) {
-
-	body, ok := in.(*api.PushBody)
-	if !ok {
-		return nil, ErrInvalidIncomingDataType
-	}
-
-	return body, nil
-}
-
-func GetBinaryPushBody(in interface{}) ([]byte, error) {
-
-	body, ok := in.([]byte)
-	if !ok {
-		return nil, ErrInvalidIncomingDataType
-	}
-
-	return body, nil
-}
+var (
+	ErrInvalidIncomingDataType    = errors.New("invalid incoming data type")
+	ErrInvalidOutgoingDataType    = errors.New("invalid outgoing data type")
+	ErrInvalidIncomingPayloadData = errors.New("invalid incoming payload data")
+	ErrEmptyEncryptedPayload      = errors.New("encrypted push without encrypted data")
+	ErrNotSupportedAlertPush      = errors.New("alerting pushes are not supported for FCM")
+)
 
 func ErrorByIncomingMessage(body *api.PushBody) error {
 

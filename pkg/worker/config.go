@@ -1,31 +1,35 @@
 package worker
 
 import (
-	"github.com/dialogs/dialog-push-service/pkg/converter"
+	"github.com/dialogs/dialog-push-service/pkg/conversion"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	ProjectID     string         `mapstructure:"project-id"`
-	NopMode       bool           `mapstructure:"nop-mode"`
-	CountThreads  int            `mapstructure:"workers"`
-	ConverterKind converter.Kind `mapstructure:"-"`
+	*conversion.Config `mapstructure:"-"`
+	ProjectID          string `mapstructure:"project-id"`
+	NopMode            bool   `mapstructure:"nop-mode"`
+	CountThreads       int    `mapstructure:"workers"`
+	Sandbox            bool   `mapstructure:"sandbox"`
 }
 
 func NewConfig(src *viper.Viper) (*Config, error) {
 
-	c := &Config{}
-	err := src.Unmarshal(c)
-	if err != nil {
+	conversionConfig := &conversion.Config{}
+	if err := src.Unmarshal(conversionConfig); err != nil {
 		return nil, err
 	}
 
+	c := &Config{}
+	if err := src.Unmarshal(c); err != nil {
+		return nil, err
+	}
+
+	c.Config = conversionConfig
 	if len(c.ProjectID) == 0 {
 		return nil, errors.New("invalid `project-id`")
 	}
-
-	c.ConverterKind = converter.GetKindFromConfig(src)
 
 	return c, nil
 }

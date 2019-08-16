@@ -17,7 +17,82 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns(in *jlexer.Lexer, out *Response) {
+func easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns(in *jlexer.Lexer, out *ResponseBody) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "reason":
+			out.Reason = string(in.String())
+		case "timestamp":
+			if data := in.Raw(); in.Ok() {
+				in.AddError((out.Timestamp).UnmarshalJSON(data))
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns(out *jwriter.Writer, in ResponseBody) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"reason\":"
+		out.RawString(prefix[1:])
+		out.String(string(in.Reason))
+	}
+	{
+		const prefix string = ",\"timestamp\":"
+		out.RawString(prefix)
+		out.Raw((in.Timestamp).MarshalJSON())
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v ResponseBody) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v ResponseBody) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *ResponseBody) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *ResponseBody) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns(l, v)
+}
+func easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns1(in *jlexer.Lexer, out *Response) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -40,11 +115,9 @@ func easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns(in *j
 			out.ID = string(in.String())
 		case "status_code":
 			out.StatusCode = int(in.Int())
-		case "reason":
-			out.Reason = string(in.String())
-		case "timestamp":
+		case "body":
 			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Timestamp).UnmarshalJSON(data))
+				in.AddError((out.Body).UnmarshalJSON(data))
 			}
 		default:
 			in.SkipRecursive()
@@ -56,7 +129,7 @@ func easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns(in *j
 		in.Consumed()
 	}
 }
-func easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns(out *jwriter.Writer, in Response) {
+func easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns1(out *jwriter.Writer, in Response) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -71,14 +144,9 @@ func easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns(out *
 		out.Int(int(in.StatusCode))
 	}
 	{
-		const prefix string = ",\"reason\":"
+		const prefix string = ",\"body\":"
 		out.RawString(prefix)
-		out.String(string(in.Reason))
-	}
-	{
-		const prefix string = ",\"timestamp\":"
-		out.RawString(prefix)
-		out.Raw((in.Timestamp).MarshalJSON())
+		out.Raw((in.Body).MarshalJSON())
 	}
 	out.RawByte('}')
 }
@@ -86,23 +154,23 @@ func easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns(out *
 // MarshalJSON supports json.Marshaler interface
 func (v Response) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns(&w, v)
+	easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns1(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Response) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns(w, v)
+	easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns1(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Response) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns(&r, v)
+	easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns1(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Response) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns(l, v)
+	easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns1(l, v)
 }

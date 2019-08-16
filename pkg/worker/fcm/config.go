@@ -4,8 +4,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/dialogs/dialog-push-service/pkg/converter"
-	"github.com/dialogs/dialog-push-service/pkg/converter/api2fcm"
 	"github.com/dialogs/dialog-push-service/pkg/worker"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -13,7 +11,6 @@ import (
 
 type Config struct {
 	*worker.Config `mapstructure:"-"`
-	APIConfig      *api2fcm.Config `mapstructure:"-"`
 
 	// Path to service account:
 	// https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk
@@ -31,19 +28,6 @@ func NewConfig(src *viper.Viper) (*Config, error) {
 	}
 
 	c.Config, err = worker.NewConfig(src)
-	if err != nil {
-		return nil, err
-	}
-
-	switch c.ConverterKind {
-	case converter.KindApi:
-		c.APIConfig, err = api2fcm.NewConfig(src)
-	case converter.KindBinary:
-		// nothing do
-	default:
-		err = errors.New("invalid converter config kind")
-	}
-
 	if err != nil {
 		return nil, err
 	}

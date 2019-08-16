@@ -4,8 +4,9 @@ import (
 	"context"
 	"runtime"
 
-	"github.com/dialogs/dialog-push-service/pkg/converter"
+	"github.com/dialogs/dialog-push-service/pkg/conversion"
 	"github.com/dialogs/dialog-push-service/pkg/metric"
+	"github.com/dialogs/dialog-push-service/pkg/provider"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -16,8 +17,7 @@ var (
 	ErrInvalidOutDataType   = NewResponseError(ErrorCodeBadRequest, errors.New("invalid out data type"))
 )
 
-type FnNewNotification func() interface{}
-type FnSendNotification func(ctx context.Context, token string, out interface{}) error
+type FnSendNotification func(ctx context.Context, out provider.IRequest) error
 
 type Worker struct {
 	projectID          string
@@ -26,19 +26,16 @@ type Worker struct {
 	threads            chan struct{}
 	logger             *zap.Logger
 	metric             *metric.Provider
-	reqConverter       converter.IRequestConverter
-	fnNewNotification  FnNewNotification
+	conversionConfig   conversion.Config
 	fnSendNotification FnSendNotification
 }
 
 func New(
 	cfg *Config,
 	kind Kind,
-	developMode bool,
+	sandbox bool,
 	logger *zap.Logger,
 	svcMetric *metric.Service,
-	reqConverter converter.IRequestConverter,
-	fnNewNotification FnNewNotification,
 	fnSendNotification FnSendNotification,
 ) (*Worker, error) {
 
@@ -60,8 +57,8 @@ func New(
 	l := logger.With(
 		zap.String("worker", kind.String()),
 		zap.String("project ID", cfg.ProjectID))
-	if developMode {
-		l = l.With(zap.Bool("develop", developMode))
+	if sandbox {
+		l = l.With(zap.Bool("develop", sandbox))
 	}
 
 	return &Worker{
@@ -70,9 +67,8 @@ func New(
 		nopMode:            cfg.NopMode,
 		threads:            threads,
 		logger:             l,
+		conversionConfig:   *cfg.Config,
 		metric:             providerMetric,
-		reqConverter:       reqConverter,
-		fnNewNotification:  fnNewNotification,
 		fnSendNotification: fnSendNotification,
 	}, nil
 }
@@ -87,6 +83,10 @@ func (w *Worker) ProjectID() string {
 
 func (w *Worker) NoOpMode() bool {
 	return w.nopMode
+}
+
+func (w *Worker) ConversionConfig() *conversion.Config {
+	return &w.conversionConfig
 }
 
 func (w *Worker) Send(ctx context.Context, req *Request) <-chan *Response {
@@ -108,9 +108,6 @@ func (w *Worker) Send(ctx context.Context, req *Request) <-chan *Response {
 			}
 			return
 		}
-
-		out := w.fnNewNotification()
-		err := w.reqConverter.Convert(req.Payload, out)
 
 		for _, token := range req.Devices {
 			resp := &Response{
@@ -137,18 +134,14 @@ func (w *Worker) Send(ctx context.Context, req *Request) <-chan *Response {
 					l.Error("empty token")
 					resp.Error = ErrEmptyToken
 
-				} else if err != nil {
-					// convert error
-					l.Error("convert incoming message", zap.Error(err))
-					resp.Error = err
-
 				} else if w.nopMode {
 					l.Info("nop mode", zap.Any("send notification", resp))
 
 				} else {
+					req.Payload.SetToken(token)
 
 					timerCancel := w.metric.NewIOTimer()
-					err := w.fnSendNotification(ctx, token, out)
+					err := w.fnSendNotification(ctx, req.Payload)
 					timerCancel()
 
 					if err != nil {

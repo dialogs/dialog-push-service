@@ -1,4 +1,4 @@
-package legacyfcm
+package gcm
 
 import (
 	"context"
@@ -89,13 +89,13 @@ func getClient(t *testing.T) *Client {
 
 	key := getAccountKey(t)
 
-	client, err := New(key, 2, time.Second)
+	client, err := New(key, false, 2, time.Second)
 	require.NoError(t, err)
 
 	return client
 }
 
-func getAccountKey(t *testing.T) string {
+func getAccountKey(t *testing.T) []byte {
 	t.Helper()
 
 	key, err := test.GetAccountKey()

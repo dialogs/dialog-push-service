@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dialogs/dialog-push-service/pkg/provider"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -32,7 +33,7 @@ type Client struct {
 
 	// send message endpoint:
 	// https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages/send
-	sendEndpoint string
+	endpoint string
 
 	// count send tries
 	sendTries int
@@ -43,9 +44,11 @@ type Client struct {
 	// service-account config:
 	// https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk
 	jwtConfig *jwt.Config
+
+	sandbox bool
 }
 
-func New(serviceAccount []byte, sendTries int, timeout time.Duration) (*Client, error) {
+func New(serviceAccount []byte, isSandbox bool, sendTries int, timeout time.Duration) (*Client, error) {
 
 	scope := []string{
 		// To authorize access to FCM, request:
@@ -66,59 +69,113 @@ func New(serviceAccount []byte, sendTries int, timeout time.Duration) (*Client, 
 		return nil, errors.Wrap(err, "account")
 	}
 
+	if sendTries <= 0 {
+		sendTries = 2
+	}
+
+	if timeout <= 0 {
+		timeout = time.Second * 10
+	}
+
 	return &Client{
-		sendEndpoint: getSendEndpoint(account.ProjectID),
-		sendTries:    sendTries,
-		jwtConfig:    jwtConfig,
+		endpoint:  getEndpoint(account.ProjectID),
+		sendTries: sendTries,
+		jwtConfig: jwtConfig,
+		sandbox:   isSandbox,
 		client: &http.Client{
 			Timeout: timeout,
 		},
 	}, nil
 }
 
-func (c *Client) Send(ctx context.Context, message *Request) (retval *Response, err error) {
+func (c *Client) Sandbox() bool {
+	return c.sandbox
+}
 
-	sendTries := c.sendTries
-	if sendTries <= 0 {
-		sendTries = 1
+func (c *Client) Send(ctx context.Context, message *Message) (retval *Response, err error) {
+
+	req, err := c.newRequest(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	for try := 0; try < sendTries; try++ {
-		retval, err = c.send(ctx, message)
+	payload, err := message.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	fnSend := func() (statusCode int, _ error) {
+		retval, err = c.send(ctx, req, payload)
 		if err != nil {
-			existTries := try < sendTries-1
-			if err == context.DeadlineExceeded && existTries {
-				continue
-			}
-
-			return nil, err
+			return 0, err
 		}
 
-		if retval.Ok() || !retval.Error.IsRemoteError() {
-			break
-		}
+		return retval.StatusCode, err
+	}
+
+	err = provider.SendWithRetry(c.sendTries, fnSend)
+	if err != nil {
+		return nil, err
 	}
 
 	return retval, nil
 }
 
-func (c *Client) send(ctx context.Context, message *Request) (*Response, error) {
+var (
+	_RequestBodyPrefixForSandbox = []byte(`{"validate_only":true,"message":`)
+	_RequestBodyPrefix           = []byte(`{"message":`)
+	_RequestBodySuffix           = []byte(`}`)
+)
+
+func (c *Client) send(ctx context.Context, req *http.Request, message json.RawMessage) (*Response, error) {
 
 	sendBodyErr := make(chan error, 1)
 
-	reqBodyReader, reqBodyWriter := io.Pipe()
-	defer reqBodyReader.Close()
+	{
+		reqBodyReader, reqBodyWriter := io.Pipe()
+		defer reqBodyReader.Close()
 
-	go func() {
-		defer reqBodyWriter.Close()
-		defer close(sendBodyErr)
+		go func() {
+			defer reqBodyWriter.Close()
+			defer close(sendBodyErr)
 
-		sendBodyErr <- json.NewEncoder(reqBodyWriter).Encode(message)
-	}()
+			var err error
 
-	req, err := c.newRequest(ctx, reqBodyReader)
-	if err != nil {
-		return nil, err
+			// Request format:
+			// https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages/send#request-body
+			if c.sandbox {
+				_, err = reqBodyWriter.Write(_RequestBodyPrefixForSandbox)
+			} else {
+				_, err = reqBodyWriter.Write(_RequestBodyPrefix)
+			}
+
+			if err == nil {
+				_, err = reqBodyWriter.Write(message)
+			}
+
+			if err == nil {
+				_, err = reqBodyWriter.Write(_RequestBodySuffix)
+			}
+
+			if err != nil {
+				sendBodyErr <- err
+				return
+			}
+		}()
+
+		token, err := c.getToken(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		// token format:
+		// https://firebase.google.com/docs/cloud-messaging/auth-server
+		req.Header.Set("Authorization", token.Type()+" "+token.AccessToken)
+
+		req.Body = reqBodyReader
+		req.GetBody = func() (io.ReadCloser, error) {
+			return reqBodyReader, nil
+		}
 	}
 
 	res, err := c.client.Do(req)
@@ -131,39 +188,31 @@ func (c *Client) send(ctx context.Context, message *Request) (*Response, error) 
 		return nil, err
 	}
 
-	retval := &Response{}
-	if err := json.NewDecoder(res.Body).Decode(retval); err != nil {
-		return nil, err
+	retval := &Response{
+		StatusCode: res.StatusCode,
+	}
+
+	// https://firebase.google.com/docs/reference/fcm/rest/v1/ErrorCode
+	switch retval.StatusCode {
+	case 200, 400, 401, 403, 404, 429:
+		if err := json.NewDecoder(res.Body).Decode(retval); err != nil {
+			return nil, err
+		}
 	}
 
 	return retval, nil
 }
 
-func (c *Client) newRequest(ctx context.Context, body io.ReadCloser) (*http.Request, error) {
+func (c *Client) newRequest(ctx context.Context) (*http.Request, error) {
 
-	token, err := c.getToken(ctx)
+	req, err := http.NewRequest(http.MethodPost, c.endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// message format:
-	// https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages/send#request-body
-	req, err := http.NewRequest(http.MethodPost, c.sendEndpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// token format:
-	// https://firebase.google.com/docs/cloud-messaging/auth-server
-	req.Header.Set("Authorization", token.Type()+" "+token.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Length", "-1")
 	req = req.WithContext(ctx)
-
-	req.Body = body
-	req.GetBody = func() (io.ReadCloser, error) {
-		return body, nil
-	}
 
 	return req, nil
 }
@@ -190,7 +239,7 @@ func (c *Client) getToken(ctx context.Context) (*oauth2.Token, error) {
 	return token, nil
 }
 
-func getSendEndpoint(projectID string) string {
+func getEndpoint(projectID string) string {
 
 	projectID = url.PathEscape(projectID)
 	return "https://fcm.googleapis.com/v1/projects/" + projectID + "/messages:send"

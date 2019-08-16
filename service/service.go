@@ -17,7 +17,7 @@ import (
 )
 
 type Service struct {
-	impl          *impl
+	implGRPC      *implGRPC
 	logger        *zap.Logger
 	apiPort       string
 	adminPort     string
@@ -32,7 +32,7 @@ func New(cfg *viper.Viper, logger *zap.Logger) (*Service, error) {
 		return nil, err
 	}
 
-	svcImpl, err := newImpl(c, logger)
+	grpcImpl, err := newImplGRPC(c, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func New(cfg *viper.Viper, logger *zap.Logger) (*Service, error) {
 	ctxDone, ctxDoneCancel := context.WithCancel(context.Background())
 
 	return &Service{
-		impl:          svcImpl,
+		implGRPC:      grpcImpl,
 		logger:        logger,
 		apiPort:       c.ApiPort,
 		adminPort:     c.AdminPort,
@@ -98,7 +98,7 @@ func (s *Service) Run() error {
 		address := net.JoinHostPort("0.0.0.0", s.apiPort)
 
 		apiSvc.RegisterService(func(grpcSvr *grpc.Server) {
-			api.RegisterPushingServer(grpcSvr, s.impl)
+			api.RegisterPushingServer(grpcSvr, s.implGRPC)
 		})
 		err := apiSvc.ListenAndServeAddr(address)
 		if err != nil && err != http.ErrServerClosed {

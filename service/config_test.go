@@ -6,19 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dialogs/dialog-push-service/pkg/converter"
-	"github.com/dialogs/dialog-push-service/pkg/converter/api2ans"
-	"github.com/dialogs/dialog-push-service/pkg/converter/api2fcm"
-	"github.com/dialogs/dialog-push-service/pkg/converter/api2legacyfcm"
-
+	"github.com/dialogs/dialog-push-service/pkg/conversion"
 	"github.com/dialogs/dialog-push-service/pkg/test"
 	"github.com/dialogs/dialog-push-service/pkg/worker"
 	"github.com/dialogs/dialog-push-service/pkg/worker/ans"
 	"github.com/dialogs/dialog-push-service/pkg/worker/fcm"
-	"github.com/dialogs/dialog-push-service/pkg/worker/legacyfcm"
-	"github.com/stretchr/testify/require"
-
+	"github.com/dialogs/dialog-push-service/pkg/worker/gcm"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfig(t *testing.T) {
@@ -26,14 +21,14 @@ func TestConfig(t *testing.T) {
 	applePem, err := test.GetPathToIOSCertificatePem()
 	require.NoError(t, err)
 
-	fcmKey, err := test.GetAccountKey()
+	gcmKey, err := test.GetAccountKey()
 	require.NoError(t, err)
 
 	fcmServiceAccount, err := test.GetPathToGoogleServiceAccount()
 	require.NoError(t, err)
 
 	const file = "config.yaml"
-	fileData := getConfigSrc(t, applePem, fcmKey, fcmServiceAccount)
+	fileData := getConfigSrc(t, applePem, string(gcmKey), fcmServiceAccount)
 	require.NoError(t, ioutil.WriteFile(file, []byte(fileData), os.ModePerm))
 	defer func() { require.NoError(t, os.Remove(file)) }()
 
@@ -53,48 +48,45 @@ func TestConfig(t *testing.T) {
 					SendTries:      10,
 					SendTimeout:    time.Second * 2,
 					Config: &worker.Config{
-						ProjectID:     "p-1",
-						NopMode:       true,
-						CountThreads:  4,
-						ConverterKind: converter.KindApi,
-					},
-					APIConfig: &api2fcm.Config{
-						AllowAlerts: true,
-						Sandbox:     true,
+						ProjectID:    "p-1",
+						NopMode:      true,
+						CountThreads: 4,
+						Sandbox:      true,
+						Config: &conversion.Config{
+							AllowAlerts: true,
+						},
 					},
 				},
 			},
-			LegacyFcm: []*legacyfcm.Config{
+			Gcm: []*gcm.Config{
 				{
-					ServerKey:   fcmKey,
+					ServerKey:   string(gcmKey),
 					SendTries:   10,
 					SendTimeout: time.Second,
 					Config: &worker.Config{
-						ProjectID:     "p-2",
-						NopMode:       true,
-						CountThreads:  3,
-						ConverterKind: converter.KindApi,
-					},
-					APIConfig: &api2legacyfcm.Config{
-						AllowAlerts: true,
-						Sandbox:     true,
+						ProjectID:    "p-2",
+						NopMode:      true,
+						CountThreads: 3,
+						Sandbox:      true,
+						Config: &conversion.Config{
+							AllowAlerts: true,
+						},
 					},
 				},
 			},
 			Ans: []*ans.Config{
 				{
-					PemFile:   applePem,
-					IsSandbox: true,
+					PemFile: applePem,
 					Config: &worker.Config{
-						ProjectID:     "p-3",
-						NopMode:       true,
-						CountThreads:  2,
-						ConverterKind: converter.KindApi,
-					},
-					APIConfig: &api2ans.Config{
-						AllowAlerts: true,
-						Topic:       "im.dlg.dialog-ee",
-						Sound:       "dialog.wav",
+						ProjectID:    "p-3",
+						NopMode:      true,
+						CountThreads: 2,
+						Sandbox:      true,
+						Config: &conversion.Config{
+							AllowAlerts: true,
+							Topic:       "im.dlg.dialog-ee",
+							Sound:       "dialog.wav",
+						},
 					},
 				},
 			},
@@ -102,13 +94,13 @@ func TestConfig(t *testing.T) {
 		cfg)
 }
 
-func getConfigSrc(t *testing.T, applePem, fcmKey, fcmServiceAccount string) string {
+func getConfigSrc(t *testing.T, applePem, gcmKey, fcmServiceAccount string) string {
 	t.Helper()
 
 	return `
 grpc-port: 8010
 http-port: 8011
-fcm-v1:
+fcm:
   - project-id: p-1
     service-account: ` + fcmServiceAccount + `
     nop-mode: true
@@ -119,7 +111,7 @@ fcm-v1:
     workers: 4
 google:
   - project-id: p-2
-    key: ` + fcmKey + `
+    key: ` + gcmKey + `
     nop-mode: true
     retries: 10
     allow-alerts: true

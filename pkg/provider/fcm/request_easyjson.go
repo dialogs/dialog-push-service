@@ -305,88 +305,7 @@ func (v *WebpushConfig) UnmarshalJSON(data []byte) error {
 func (v *WebpushConfig) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm1(l, v)
 }
-func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm2(in *jlexer.Lexer, out *Request) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeString()
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "validate_only":
-			out.ValidateOnly = bool(in.Bool())
-		case "message":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Message).UnmarshalJSON(data))
-			}
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm2(out *jwriter.Writer, in Request) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.ValidateOnly {
-		const prefix string = ",\"validate_only\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.Bool(bool(in.ValidateOnly))
-	}
-	{
-		const prefix string = ",\"message\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Raw((in.Message).MarshalJSON())
-	}
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v Request) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm2(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v Request) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm2(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *Request) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm2(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *Request) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm2(l, v)
-}
-func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(in *jlexer.Lexer, out *Notification) {
+func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm2(in *jlexer.Lexer, out *Notification) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -421,7 +340,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(in *
 		in.Consumed()
 	}
 }
-func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(out *jwriter.Writer, in Notification) {
+func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm2(out *jwriter.Writer, in Notification) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -457,27 +376,27 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(out 
 // MarshalJSON supports json.Marshaler interface
 func (v Notification) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(&w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm2(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Notification) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm2(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Notification) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(&r, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm2(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Notification) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(l, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm2(l, v)
 }
-func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm4(in *jlexer.Lexer, out *Message) {
+func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(in *jlexer.Lexer, out *Message) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -594,7 +513,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm4(in *
 		in.Consumed()
 	}
 }
-func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm4(out *jwriter.Writer, in Message) {
+func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(out *jwriter.Writer, in Message) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -714,27 +633,27 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm4(out 
 // MarshalJSON supports json.Marshaler interface
 func (v Message) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm4(&w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Message) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm4(w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Message) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm4(&r, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Message) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm4(l, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(l, v)
 }
-func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm5(in *jlexer.Lexer, out *FcmOptions) {
+func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm4(in *jlexer.Lexer, out *FcmOptions) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -765,7 +684,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm5(in *
 		in.Consumed()
 	}
 }
-func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm5(out *jwriter.Writer, in FcmOptions) {
+func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm4(out *jwriter.Writer, in FcmOptions) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -781,27 +700,27 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm5(out 
 // MarshalJSON supports json.Marshaler interface
 func (v FcmOptions) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm5(&w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm4(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v FcmOptions) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm5(w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm4(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *FcmOptions) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm5(&r, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm4(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *FcmOptions) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm5(l, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm4(l, v)
 }
-func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm6(in *jlexer.Lexer, out *ApnsFcmOptions) {
+func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm5(in *jlexer.Lexer, out *ApnsFcmOptions) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -834,7 +753,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm6(in *
 		in.Consumed()
 	}
 }
-func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm6(out *jwriter.Writer, in ApnsFcmOptions) {
+func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm5(out *jwriter.Writer, in ApnsFcmOptions) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -860,27 +779,27 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm6(out 
 // MarshalJSON supports json.Marshaler interface
 func (v ApnsFcmOptions) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm6(&w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm5(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v ApnsFcmOptions) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm6(w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm5(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *ApnsFcmOptions) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm6(&r, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm5(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *ApnsFcmOptions) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm6(l, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm5(l, v)
 }
-func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm7(in *jlexer.Lexer, out *ApnsConfig) {
+func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm6(in *jlexer.Lexer, out *ApnsConfig) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -967,7 +886,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm7(in *
 		in.Consumed()
 	}
 }
-func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm7(out *jwriter.Writer, in ApnsConfig) {
+func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm6(out *jwriter.Writer, in ApnsConfig) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -1037,27 +956,27 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm7(out 
 // MarshalJSON supports json.Marshaler interface
 func (v ApnsConfig) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm7(&w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm6(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v ApnsConfig) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm7(w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm6(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *ApnsConfig) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm7(&r, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm6(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *ApnsConfig) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm7(l, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm6(l, v)
 }
-func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm8(in *jlexer.Lexer, out *AndroidNotification) {
+func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm7(in *jlexer.Lexer, out *AndroidNotification) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -1154,7 +1073,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm8(in *
 		in.Consumed()
 	}
 }
-func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm8(out *jwriter.Writer, in AndroidNotification) {
+func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm7(out *jwriter.Writer, in AndroidNotification) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -1308,27 +1227,27 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm8(out 
 // MarshalJSON supports json.Marshaler interface
 func (v AndroidNotification) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm8(&w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm7(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v AndroidNotification) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm8(w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm7(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *AndroidNotification) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm8(&r, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm7(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *AndroidNotification) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm8(l, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm7(l, v)
 }
-func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm9(in *jlexer.Lexer, out *AndroidFcmOptions) {
+func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm8(in *jlexer.Lexer, out *AndroidFcmOptions) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -1359,7 +1278,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm9(in *
 		in.Consumed()
 	}
 }
-func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm9(out *jwriter.Writer, in AndroidFcmOptions) {
+func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm8(out *jwriter.Writer, in AndroidFcmOptions) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -1374,27 +1293,27 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm9(out 
 // MarshalJSON supports json.Marshaler interface
 func (v AndroidFcmOptions) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm9(&w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm8(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v AndroidFcmOptions) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm9(w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm8(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *AndroidFcmOptions) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm9(&r, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm8(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *AndroidFcmOptions) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm9(l, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm8(l, v)
 }
-func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm10(in *jlexer.Lexer, out *AndroidConfig) {
+func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm9(in *jlexer.Lexer, out *AndroidConfig) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -1467,7 +1386,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm10(in 
 		in.Consumed()
 	}
 }
-func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm10(out *jwriter.Writer, in AndroidConfig) {
+func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm9(out *jwriter.Writer, in AndroidConfig) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -1557,23 +1476,23 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm10(out
 // MarshalJSON supports json.Marshaler interface
 func (v AndroidConfig) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm10(&w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm9(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v AndroidConfig) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm10(w, v)
+	easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm9(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *AndroidConfig) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm10(&r, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm9(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *AndroidConfig) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm10(l, v)
+	easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm9(l, v)
 }

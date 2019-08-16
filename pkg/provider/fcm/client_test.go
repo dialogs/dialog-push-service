@@ -26,48 +26,48 @@ func init() {
 	log.SetFlags(log.Llongfile | log.Ltime | log.Lmicroseconds)
 }
 
-func TestGetSendEndpoint(t *testing.T) {
+func TestGetEndpoint(t *testing.T) {
 
 	require.Equal(t,
 		"https://fcm.googleapis.com/v1/projects/project-id/messages:send",
-		getSendEndpoint("project-id"))
+		getEndpoint("project-id"))
 
 	require.Equal(t,
 		"https://fcm.googleapis.com/v1/projects/project%20%2F%5C/messages:send",
-		getSendEndpoint(`project /\`))
+		getEndpoint(`project /\`))
 }
 
 func TestSendOk(t *testing.T) {
 
 	token := getDeviceToken(t)
 
-	msg := &Request{
-		Message: Message{
-			Token: token,
-			Notification: &Notification{
-				Title: "test-title",
-				Body:  time.Now().Format(time.RFC3339Nano),
-			},
+	msg := &Message{
+		Token: token,
+		Notification: &Notification{
+			Title: "test-title",
+			Body:  time.Now().Format(time.RFC3339Nano),
 		},
 	}
 
 	client := getClient(t)
 
-	// some operations for check reusing token
-	for i := 0; i < 3; i++ {
-		resp, err := client.Send(context.Background(), msg)
-		require.NoError(t, err)
-		require.True(t, resp.Ok())
-		require.True(t, strings.HasPrefix(resp.Name, "projects/"), resp.Name)
+	for _, sandbox := range []bool{false, true} {
+		client.sandbox = sandbox
+
+		// some operations for check reusing token
+		for i := 0; i < 3; i++ {
+			resp, err := client.Send(context.Background(), msg)
+			require.NoError(t, err)
+			require.True(t, resp.Ok())
+			require.True(t, strings.HasPrefix(resp.Name, "projects/"), resp.Name)
+		}
 	}
 }
 
 func TestSendError(t *testing.T) {
 
-	msg := &Request{
-		Message: Message{
-			Token: "-",
-		},
+	msg := &Message{
+		Token: "-",
 	}
 
 	client := getClient(t)
@@ -77,6 +77,7 @@ func TestSendError(t *testing.T) {
 
 	require.Equal(t,
 		&Response{
+			StatusCode: 400,
 			Error: &SendError{
 				Code:    400,
 				Message: `The registration token is not a valid FCM registration token`,
@@ -106,7 +107,7 @@ func getClient(t *testing.T) *Client {
 
 	svcAccount := getServiceAccount(t)
 
-	client, err := New(svcAccount, 2, time.Second)
+	client, err := New(svcAccount, false, 2, time.Second)
 	require.NoError(t, err)
 
 	return client

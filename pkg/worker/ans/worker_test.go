@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dialogs/dialog-push-service/pkg/converter"
 	"github.com/dialogs/dialog-push-service/pkg/metric"
+	"github.com/dialogs/dialog-push-service/pkg/provider/ans"
 	"github.com/dialogs/dialog-push-service/pkg/test"
 	"github.com/dialogs/dialog-push-service/pkg/worker"
 	"github.com/spf13/viper"
@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var payload = []byte(`{"payload":{"aps":{"title":"title"}}}`)
+var payload = []byte(`{"aps":{"title":"title"}}`)
 
 func TestWokerNew(t *testing.T) {
 
@@ -51,38 +51,6 @@ func TestWokerSendErrInvalidDeviceToken(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestWokerSendErrInvalidIncomingDataType(t *testing.T) {
-
-	cfg := getConfig(t)
-	logger := getLogger(t)
-
-	w, err := New(cfg, logger, metric.New())
-	require.NoError(t, err)
-
-	chOut := w.Send(context.Background(), &worker.Request{
-		Devices: []string{"token1", "token2"},
-	})
-
-	require.Equal(t,
-		&worker.Response{
-			ProjectID:   w.ProjectID(),
-			DeviceToken: "token1",
-			Error:       converter.ErrInvalidIncomingDataType,
-		},
-		<-chOut)
-
-	require.Equal(t,
-		&worker.Response{
-			ProjectID:   w.ProjectID(),
-			DeviceToken: "token2",
-			Error:       converter.ErrInvalidIncomingDataType,
-		},
-		<-chOut)
-
-	_, ok := <-chOut
-	require.False(t, ok)
-}
-
 func TestWokerSendNopOk(t *testing.T) {
 
 	cfg := getConfig(t)
@@ -93,7 +61,7 @@ func TestWokerSendNopOk(t *testing.T) {
 
 	chOut := w.Send(context.Background(), &worker.Request{
 		Devices: []string{"token1", "token2"},
-		Payload: payload,
+		Payload: &ans.Request{Payload: payload},
 	})
 
 	require.Equal(t,
@@ -127,7 +95,7 @@ func TestWokerSendOk(t *testing.T) {
 
 	chOut := w.Send(context.Background(), &worker.Request{
 		Devices: []string{token, "token2", token},
-		Payload: payload,
+		Payload: &ans.Request{Payload: payload},
 	})
 
 	require.Equal(t,
@@ -176,11 +144,10 @@ func getConfig(t *testing.T) *Config {
 
 	src := viper.New()
 	for k, v := range map[string]interface{}{
-		"project-id":     "project-id-123",
-		"pem":            getPathToCertificatePem(t),
-		"nop-mode":       "true",
-		"workers":        "-1",
-		"converter-kind": converter.KindBinary.String(),
+		"project-id": "project-id-123",
+		"pem":        getPathToCertificatePem(t),
+		"nop-mode":   "true",
+		"workers":    "-1",
 	} {
 		src.Set(k, v)
 	}

@@ -1,4 +1,4 @@
-package legacyfcm
+package gcm
 
 const (
 	ErrorCodeMissingRegistration = "MissingRegistration"

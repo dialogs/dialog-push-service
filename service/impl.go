@@ -7,25 +7,29 @@ import (
 	"sync"
 
 	"github.com/dialogs/dialog-push-service/pkg/api"
+	"github.com/dialogs/dialog-push-service/pkg/conversion"
 	"github.com/dialogs/dialog-push-service/pkg/metric"
 	"github.com/dialogs/dialog-push-service/pkg/worker"
 	"github.com/dialogs/dialog-push-service/pkg/worker/ans"
 	"github.com/dialogs/dialog-push-service/pkg/worker/fcm"
-	"github.com/dialogs/dialog-push-service/pkg/worker/legacyfcm"
+	"github.com/dialogs/dialog-push-service/pkg/worker/gcm"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/peer"
 )
 
-var errInvalidProjectID = errors.New("invalid project ID")
+var (
+	errInvalidProjectID         = errors.New("invalid project ID")
+	errUnknownConversationRules = errors.New("unknown conversation rules pb to provider request")
+)
 
-type impl struct {
+type implGRPC struct {
 	metric  *metric.Service
 	workers map[string]worker.IWorker
 	logger  *zap.Logger
 }
 
-func newImpl(cfg *Config, logger *zap.Logger) (*impl, error) {
+func newImplGRPC(cfg *Config, logger *zap.Logger) (*implGRPC, error) {
 
 	svcMetric := metric.New()
 
@@ -34,18 +38,18 @@ func newImpl(cfg *Config, logger *zap.Logger) (*impl, error) {
 		return nil, err
 	}
 
-	return &impl{
+	return &implGRPC{
 		metric:  svcMetric,
 		workers: workers,
 		logger:  logger,
 	}, nil
 }
 
-func (i *impl) Ping(context.Context, *api.PingRequest) (*api.PongResponse, error) {
+func (i *implGRPC) Ping(context.Context, *api.PingRequest) (*api.PongResponse, error) {
 	return &api.PongResponse{}, nil
 }
 
-func (i *impl) PushStream(stream api.Pushing_PushStreamServer) error {
+func (i *implGRPC) PushStream(stream api.Pushing_PushStreamServer) error {
 
 	l := i.logger.With(zap.String("method", "push stream"))
 	defer func() { l.Info("close stream") }()
@@ -91,7 +95,7 @@ func (i *impl) PushStream(stream api.Pushing_PushStreamServer) error {
 	}
 }
 
-func (i *impl) SinglePush(ctx context.Context, push *api.Push) (*api.Response, error) {
+func (i *implGRPC) SinglePush(ctx context.Context, push *api.Push) (*api.Response, error) {
 
 	l := i.logger.With(zap.String("method", "single push"))
 
@@ -120,7 +124,7 @@ func (i *impl) SinglePush(ctx context.Context, push *api.Push) (*api.Response, e
 	return res, nil
 }
 
-func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (<-chan *sendPushResult, error) {
+func (i *implGRPC) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (<-chan *sendPushResult, error) {
 
 	l = l.With(zap.String("id", push.CorrelationId))
 
@@ -145,10 +149,11 @@ func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (<-c
 		wg := sync.WaitGroup{}
 
 		for projectID, deviceList := range push.Destinations {
+			projectLogger := l.With(zap.String("project id", projectID))
 
 			w, err := i.getWorker(projectID)
 			if err != nil {
-				l.Error("get worker", zap.Error(err), zap.String("project id", projectID))
+				projectLogger.Error("get worker", zap.Error(err))
 
 				chOut <- newSendPushResult(projectID)
 				continue
@@ -161,7 +166,23 @@ func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (<-c
 				req := &worker.Request{
 					Devices:       devices,
 					CorrelationID: push.CorrelationId,
-					Payload:       push.Body,
+				}
+
+				conversationConfig := projectWorker.ConversionConfig()
+
+				switch w.Kind() {
+				case worker.KindApns:
+					req.Payload, err = conversion.RequestPbToAns(push.Body, w.ExistVoIP(), conversationConfig.AllowAlerts, &conversationConfig.Topic, &conversationConfig.Sound)
+				case worker.KindFcm:
+					req.Payload, err = conversion.RequestPbToFcm(push.Body, conversationConfig.AllowAlerts)
+				case worker.KindGcm:
+					req.Payload, err = conversion.RequestPbToGcm(push.Body, conversationConfig.AllowAlerts)
+				default:
+					err = errUnknownConversationRules
+				}
+
+				if err != nil {
+					projectLogger.Error("conversation", zap.Error(err))
 				}
 
 				pushRes := newSendPushResult(projectWorker.ProjectID())
@@ -188,7 +209,7 @@ func (i *impl) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) (<-c
 	return chOut, nil
 }
 
-func (i *impl) getWorker(projectID string) (worker.IWorker, error) {
+func (i *implGRPC) getWorker(projectID string) (worker.IWorker, error) {
 
 	w, ok := i.workers[projectID]
 	if !ok {
@@ -198,7 +219,7 @@ func (i *impl) getWorker(projectID string) (worker.IWorker, error) {
 	return w, nil
 }
 
-func (i *impl) getAddrInfo(ctx context.Context) string {
+func (i *implGRPC) getAddrInfo(ctx context.Context) string {
 	peer, peerOk := peer.FromContext(ctx)
 	if peerOk {
 		return peer.Addr.String()
@@ -225,9 +246,9 @@ func getWorkers(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (map
 				err = errors.Wrap(err, "project ID: "+wConf.ProjectID)
 			}
 
-		case *legacyfcm.Config:
-			wConf := c.(*legacyfcm.Config)
-			w, err = legacyfcm.New(wConf, logger, svcMetric)
+		case *gcm.Config:
+			wConf := c.(*gcm.Config)
+			w, err = gcm.New(wConf, logger, svcMetric)
 			if err != nil {
 				err = errors.Wrap(err, "project ID: "+wConf.ProjectID)
 			}

@@ -33,7 +33,6 @@ google:
     send-timeout: <string>
     nop-mode: <boolean>
     workers: <number>
-    converter-kind: <string>
     allow-alerts: <boolean>
     sandbox: <boolean>
 ```
@@ -44,7 +43,6 @@ properties:
 - send-timeout - time duration. Example: 1s, 2m
 - nop-mode - if the option is set to true, the message will not be sent
 - workers - count workers for sending. By default the value is equal count of processors.
-- converter-kind - kind of the converter. By default is equal 'api'(protobuf message to provider message). Variants: api, binary
 - allow-alerts - enabled alerting messages for converter protobuf push message to a notification message
 - sandbox - if the option is set to true, the message will not be actually sent. Instead FCM performs all the necessary validations, and emulates the send operation
 
@@ -58,7 +56,6 @@ fcm-v1:
     send-timeout: <string>
     nop-mode: <boolean>
     workers: <number>
-    converter-kind: <string>
     allow-alerts: <boolean>
     sandbox: <boolean>
 ```
@@ -69,7 +66,6 @@ properties:
 - send-timeout - time duration. Example: 1s, 2m
 - nop-mode - if the option is set to true, the message will not be sent
 - workers - count workers for sending. By default the value is equal count of processors.
-- converter-kind - kind of the converter. By default is equal 'api'(protobuf message to provider message). Variants: api, binary
 - allow-alerts - enabled alerting messages for converter protobuf push message to a notification message
 - sandbox - if the option is set to true, the message will not be actually sent. Instead FCM performs all the necessary validations, and emulates the send operation
 
@@ -81,7 +77,6 @@ apple:
     pem: <string>
     nop-mode: <boolean>
     workers: <number>
-    converter-kind: <string>
     allow-alerts: <boolean>
     sandbox: <boolean>
 ```
@@ -90,7 +85,6 @@ properties:
 - pem - path to tls certificate in pem format
 - nop-mode - if the option is set to true, the message will not be sent
 - workers - count workers for sending. By default the value is equal count of processors.
-- converter-kind - kind of the converter. By default is equal 'api'(protobuf message to provider message). Variants: api, binary
 - allow-alerts - enabled alerting messages for converter protobuf push message to a notification message
 - topic - the [topic](https://developer.apple.com/library/archive/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/CommunicatingwithAPNs.html#//apple_ref/doc/uid/TP40008194-CH11-SW1) of the remote notification, which is typically the bundle ID for your ap
 - sound - sound of the alerting message

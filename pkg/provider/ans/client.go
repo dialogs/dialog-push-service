@@ -4,31 +4,30 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
-	"encoding/asn1"
-	"fmt"
+	"encoding/json"
 	"io"
+	"io/ioutil"
+	"net"
+	"net/http"
 	"net/url"
+	"strconv"
+	"time"
 
+	"github.com/dialogs/dialog-push-service/pkg/provider"
 	"github.com/pkg/errors"
-	"github.com/sideshow/apns2"
-)
-
-// oid info:
-// https://images.apple.com/certificateauthority/pdf/Apple_WWDR_CPS_v1.20.pdf
-// https://github.com/SilentCircle/apns_tools/blob/master/FakeAppleWWDRCA.cfg
-var (
-	OidPushDevelop    = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 1})
-	OidPushProduction = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 2})
-	OidVoIPTopics     = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 6})
-	OidVoIP           = asn1.ObjectIdentifier([]int{1, 2, 840, 113635, 100, 6, 3, 5})
+	"golang.org/x/net/http2"
 )
 
 type Client struct {
-	native *apns2.Client
+	client         *http.Client
+	endpointPrefix string
+	certTLS        tls.Certificate
+	sandbox        bool
+	sendTries      int
+	existVoIP      bool
 }
 
-func New(certTLS *tls.Certificate, isSandbox bool) (*Client, error) {
+func New(certTLS *tls.Certificate, isSandbox bool, sendTries int, timeout time.Duration) (*Client, error) {
 
 	hasDevelopCert, err := ExistOID(certTLS, OidPushDevelop)
 	if err != nil {
@@ -40,41 +39,94 @@ func New(certTLS *tls.Certificate, isSandbox bool) (*Client, error) {
 		return nil, errors.Wrap(err, "check production certificate type")
 	}
 
-	native := apns2.NewClient(*certTLS)
-	if hasDevelopCert && (!hasProductionCert || isSandbox) {
-		native.Development()
-	} else {
-		native.Production()
+	existVoIP, err := ExistOID(certTLS, OidVoIP)
+	if err != nil {
+		return nil, errors.Wrap(err, "check VoIP mode")
 	}
 
+	sandbox := hasDevelopCert && (!hasProductionCert || isSandbox)
+
+	endpointPrefix := "https://api.push.apple.com"
+	if sandbox {
+		endpointPrefix = "https://api.development.push.apple.com"
+	}
+	endpointPrefix += "/3/device/"
+
+	if sendTries <= 0 {
+		sendTries = 2
+	}
+
+	if timeout <= 0 {
+		timeout = time.Second * 10
+	}
+
+	client := newHttpClient(certTLS, timeout)
+
 	return &Client{
-		native: native,
+		client:         client,
+		endpointPrefix: endpointPrefix,
+		certTLS:        *certTLS,
+		sandbox:        sandbox,
+		sendTries:      sendTries,
+		existVoIP:      existVoIP,
 	}, nil
 }
 
-func NewFromPem(pemData []byte, isSandbox bool) (*Client, error) {
+func NewFromPem(pemData []byte, isSandbox bool, sendTries int, timeout time.Duration) (*Client, error) {
 
 	certTLS, err := tls.X509KeyPair(pemData, pemData)
 	if err != nil {
 		return nil, errors.Wrap(err, "read certificate")
 	}
 
-	return New(&certTLS, isSandbox)
+	return New(&certTLS, isSandbox, sendTries, timeout)
 }
 
 func (c *Client) Certificate() tls.Certificate {
-	return c.native.Certificate
+	return c.certTLS
 }
 
-func (c *Client) DevelopMode() bool {
-	return c.native.Host == apns2.HostDevelopment
+func (c *Client) Sandbox() bool {
+	return c.sandbox
 }
 
-func (c *Client) Send(ctx context.Context, req *Request) (*Response, error) {
+func (c *Client) ExistVoIP() bool {
+	return c.existVoIP
+}
 
-	nativeReq := req.native()
+func (c *Client) Send(ctx context.Context, message *Request) (retval *Response, err error) {
 
-	nativeRes, err := c.native.PushWithContext(ctx, nativeReq)
+	req, err := c.newRequest(ctx, message.Token, &message.Headers)
+	if err != nil {
+		return nil, err
+	}
+
+	fnSend := func() (statusCode int, _ error) {
+		retval, err = c.send(ctx, req, message)
+		if err != nil {
+			return 0, err
+		}
+
+		return retval.StatusCode, err
+	}
+
+	err = provider.SendWithRetry(c.sendTries, fnSend)
+	if err != nil {
+		return nil, err
+	}
+
+	return retval, nil
+}
+
+func (c *Client) send(ctx context.Context, req *http.Request, message *Request) (*Response, error) {
+
+	body := ioutil.NopCloser(bytes.NewReader(message.Payload))
+	req.Body = body
+	req.GetBody = func() (io.ReadCloser, error) {
+		return body, nil
+	}
+
+	res, err := c.client.Do(req)
 	if err != nil {
 		if urlError, ok := err.(*url.Error); ok {
 			// hide device token in the error info
@@ -85,106 +137,82 @@ func (c *Client) Send(ctx context.Context, req *Request) (*Response, error) {
 
 		return nil, err
 	}
+	defer res.Body.Close()
 
-	res := NewResponse(nativeRes)
+	resp := NewResponse(res.Header.Get("apns-id"), res.StatusCode)
+	switch resp.StatusCode {
+	case 200, 400, 403, 404, 405, 410, 413, 429, 500, 503:
+		// Table 8-6Values for the APNs JSON reason key
+		// https://developer.apple.com/library/archive/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/CommunicatingwithAPNs.html#//apple_ref/doc/uid/TP40008194-CH11-SW1
+		if err := json.NewDecoder(res.Body).Decode(&resp.Body); err != nil && err != io.EOF {
+			return nil, err
+		}
+	}
 
-	return res, nil
+	return resp, nil
 }
 
-func ExistOID(cert *tls.Certificate, oid asn1.ObjectIdentifier) (bool, error) {
+func (c *Client) newRequest(ctx context.Context, token string, header *RequestHeader) (*http.Request, error) {
 
-	values, err := GetOIDValue(cert, oid)
+	endpoint := c.endpointPrefix + token
+	req, err := http.NewRequest(http.MethodPost, endpoint, nil)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	return len(values) > 0, nil
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	// Table 8-2 APNs request headers
+	// https://developer.apple.com/library/archive/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/CommunicatingwithAPNs.html#//apple_ref/doc/uid/TP40008194-CH11-SW1
+	if header.ID != "" {
+		req.Header.Set("apns-id", header.ID)
+	}
+
+	if !header.Expiration.IsZero() {
+		req.Header.Set("apns-expiration", strconv.FormatInt(header.Expiration.Unix(), 10))
+	}
+
+	if header.Priority > 0 {
+		req.Header.Set("apns-priority", strconv.Itoa(header.Priority))
+	}
+
+	if header.Topic != "" {
+		req.Header.Set("apns-topic", header.Topic)
+	}
+
+	if header.CollapseID != "" {
+		req.Header.Set("apns-collapse-id", header.CollapseID)
+	}
+
+	req = req.WithContext(ctx)
+
+	return req, nil
 }
 
-func GetOIDValue(cert *tls.Certificate, oid asn1.ObjectIdentifier) ([][]byte, error) {
+func newHttpClient(certTLS *tls.Certificate, timeout time.Duration) *http.Client {
 
-	retval := make([][]byte, 0)
-
-	for _, c := range cert.Certificate {
-		cList, err := x509.ParseCertificates(c)
-		if err != nil {
-			return nil, err
+	dial := func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+		dialer := &net.Dialer{
+			Timeout:   timeout,
+			KeepAlive: timeout,
 		}
-
-		for _, c := range cList {
-			for _, e := range c.Extensions {
-				if e.Id.Equal(oid) {
-					retval = append(retval, e.Value)
-				}
-			}
-		}
+		return tls.DialWithDialer(dialer, network, addr, cfg)
 	}
 
-	return retval, nil
-}
-
-// Returns topics from certificate extension value
-// Binary data format:
-// <block start=0x30> <block size=0xD> <value start=0xc> <value size=0x2> <value byte 1> <value byte 2>
-// <block start=0x30> <block size=0x3> <value start=0xc> <value size=0x1> <value byte 1>
-// <value start=0xc> <value size=0x2> <value byte 1> <value byte 2>
-func GetTopics(src []byte) ([]string, error) {
-
-	type State int
-	const (
-		BlockStart uint8 = 0x30
-		ValueStart uint8 = 0xc
-
-		NextBlock State = iota
-		ReadBlockSize
-		ReadValueSize
-		ReadValue
-	)
-
-	var (
-		r         = bytes.NewReader(src)
-		value     = bytes.NewBuffer(nil)
-		state     = NextBlock
-		retval    = make([]string, 0)
-		valueSize byte
-	)
-
-	for {
-		b, err := r.ReadByte()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-
-		switch state {
-		case NextBlock:
-			if b == BlockStart {
-				state = ReadBlockSize
-			} else if b == ValueStart {
-				state = ReadValueSize
-			} else {
-				return nil, fmt.Errorf("topic: unknown block ID: %v", b)
-			}
-
-		case ReadBlockSize:
-			state = NextBlock
-
-		case ReadValueSize:
-			valueSize = b
-			state = ReadValue
-
-		case ReadValue:
-			value.WriteByte(b)
-			valueSize--
-
-			if valueSize == 0 {
-				retval = append(retval, value.String())
-				value.Reset()
-				state = NextBlock
-			}
-		}
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{*certTLS},
+	}
+	if len(certTLS.Certificate) > 0 {
+		tlsConfig.BuildNameToCertificate()
 	}
 
-	return retval, nil
+	transport := &http2.Transport{
+		TLSClientConfig: tlsConfig,
+		DialTLS:         dial,
+	}
+
+	return &http.Client{
+		Transport: transport,
+		Timeout:   timeout,
+	}
 }

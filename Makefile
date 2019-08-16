@@ -48,7 +48,7 @@ endif
 	easyjson -all ${$@_target}/request.go
 	easyjson -all ${$@_target}/response.go
 
-	$(eval $@_target := pkg/provider/legacyfcm)
+	$(eval $@_target := pkg/provider/gcm)
 	rm -f ${$@_target}/*_easyjson.go
 	easyjson -all ${$@_target}/request.go
 	easyjson -all ${$@_target}/response.go

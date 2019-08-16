@@ -4,17 +4,17 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
-	"net/url"
+	"net/http"
 	"strconv"
 
-	"github.com/dialogs/dialog-push-service/pkg/converter"
-	"github.com/dialogs/dialog-push-service/pkg/converter/api2ans"
-	"github.com/dialogs/dialog-push-service/pkg/converter/binary"
 	"github.com/dialogs/dialog-push-service/pkg/metric"
+	"github.com/dialogs/dialog-push-service/pkg/provider"
 	"github.com/dialogs/dialog-push-service/pkg/provider/ans"
 	"github.com/dialogs/dialog-push-service/pkg/worker"
 	"go.uber.org/zap"
 )
+
+var ErrInvalidRequestType = errors.New("invalid apns request type")
 
 type Worker struct {
 	*worker.Worker
@@ -28,23 +28,9 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 		return nil, err
 	}
 
-	provider, err := ans.NewFromPem(pem, cfg.IsSandbox)
+	provider, err := ans.NewFromPem(pem, cfg.Sandbox, cfg.SendTries, cfg.SendTimeout)
 	if err != nil {
 		return nil, err
-	}
-
-	var reqConverter converter.IRequestConverter
-
-	switch cfg.ConverterKind {
-	case converter.KindApi:
-		reqConverter, err = api2ans.NewRequestConverter(cfg.APIConfig, provider.Certificate())
-		if err != nil {
-			return nil, err
-		}
-
-	case converter.KindBinary:
-		reqConverter = binary.NewRequestConverter()
-
 	}
 
 	w := &Worker{
@@ -54,11 +40,9 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 	w.Worker, err = worker.New(
 		cfg.Config,
 		worker.KindApns,
-		provider.DevelopMode(),
+		provider.Sandbox(),
 		logger,
 		svcMetric,
-		reqConverter,
-		w.newNotification,
 		w.sendNotification,
 	)
 	if err != nil {
@@ -68,26 +52,29 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 	return w, nil
 }
 
-func (w *Worker) newNotification() interface{} {
-	return &ans.Request{}
+func (w *Worker) ExistVoIP() bool {
+	return w.provider.ExistVoIP()
 }
 
-func (w *Worker) sendNotification(ctx context.Context, token string, out interface{}) error {
+func (w *Worker) sendNotification(ctx context.Context, in provider.IRequest) error {
 
-	req, ok := out.(*ans.Request)
-	if !ok {
-		return worker.ErrInvalidOutDataType
+	req, ok := in.(*ans.Request)
+	if !ok || req == nil {
+		return ErrInvalidRequestType
 	}
-
-	req.Token = url.QueryEscape(token)
 
 	answer, err := w.provider.Send(ctx, req)
 	if err != nil {
 		return err
 
 	} else if answer.StatusCode != 200 {
-		err := errors.New(strconv.Itoa(answer.StatusCode) + " " + answer.Reason)
-		if answer.StatusCode == 400 && answer.Reason == "BadDeviceToken" {
+		msg := answer.Body.Reason
+		if msg == "" {
+			msg = http.StatusText(answer.StatusCode)
+		}
+
+		err := errors.New(strconv.Itoa(answer.StatusCode) + " " + msg)
+		if answer.StatusCode == http.StatusBadRequest && answer.Body.Reason == "BadDeviceToken" {
 			return worker.NewResponseErrorBadDeviceToken(err)
 		}
 

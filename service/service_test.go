@@ -117,7 +117,7 @@ func testPushStreamSuccess(t *testing.T, conn *grpc.ClientConn) {
 
 	destinations := map[string]*api.DeviceIdList{
 		"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
-		"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
+		"p-gcm":     &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
 		"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
 		"p-unknown": &api.DeviceIdList{DeviceIds: []string{"token7", android, ios, "token8"}},
 	}
@@ -154,11 +154,11 @@ func testPushStreamSuccess(t *testing.T, conn *grpc.ClientConn) {
 					},
 					res)
 
-			case "p-google":
+			case "p-gcm":
 				require.Equal(t,
 					&api.Response{
 						ProjectInvalidations: map[string]*api.DeviceIdList{
-							"p-google": &api.DeviceIdList{DeviceIds: []string{"token3", "token4"}},
+							"p-gcm": &api.DeviceIdList{DeviceIds: []string{"token3", "token4"}},
 						},
 					},
 					res)
@@ -197,7 +197,7 @@ func testPushStreamInvalidIncomigData(t *testing.T, conn *grpc.ClientConn) {
 		push := &api.Push{
 			Destinations: map[string]*api.DeviceIdList{
 				"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
-				"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
+				"p-gcm":     &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
 				"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
 				"p-unknown": &api.DeviceIdList{DeviceIds: []string{"", "-", android, ios, "token4"}},
 			},
@@ -221,7 +221,7 @@ func testSinglePushSuccess(t *testing.T, conn *grpc.ClientConn) {
 	res, err := client.SinglePush(context.Background(), &api.Push{
 		Destinations: map[string]*api.DeviceIdList{
 			"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", android, "token1"}},
-			"p-google":  &api.DeviceIdList{DeviceIds: []string{"", "-", android, "token2"}},
+			"p-gcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", android, "token2"}},
 			"p-apple":   &api.DeviceIdList{DeviceIds: []string{"", "-", ios, "token3"}},
 			"p-unknown": &api.DeviceIdList{DeviceIds: []string{"", "-", android, ios, "token4"}},
 		},
@@ -239,7 +239,7 @@ func testSinglePushSuccess(t *testing.T, conn *grpc.ClientConn) {
 		&api.Response{
 			ProjectInvalidations: map[string]*api.DeviceIdList{
 				"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", "token1"}},
-				"p-google":  &api.DeviceIdList{DeviceIds: []string{"", "-", "token2"}},
+				"p-gcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", "token2"}},
 				"p-apple":   &api.DeviceIdList{DeviceIds: []string{"", "-", "token3"}},
 				"p-unknown": &api.DeviceIdList{},
 			},
@@ -257,7 +257,7 @@ func testSinglePushInvalidIncomigData(t *testing.T, conn *grpc.ClientConn) {
 	res, err := client.SinglePush(context.Background(), &api.Push{
 		Destinations: map[string]*api.DeviceIdList{
 			"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"token1", android, "token2"}},
-			"p-google":  &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
+			"p-gcm":     &api.DeviceIdList{DeviceIds: []string{"token3", android, "token4"}},
 			"p-apple":   &api.DeviceIdList{DeviceIds: []string{"token5", ios, "token6"}},
 			"p-unknown": &api.DeviceIdList{DeviceIds: []string{"token7", android, ios, "token8"}},
 		},
@@ -268,7 +268,7 @@ func testSinglePushInvalidIncomigData(t *testing.T, conn *grpc.ClientConn) {
 		&api.Response{
 			ProjectInvalidations: map[string]*api.DeviceIdList{
 				"p-fcm":     &api.DeviceIdList{},
-				"p-google":  &api.DeviceIdList{},
+				"p-gcm":     &api.DeviceIdList{},
 				"p-apple":   &api.DeviceIdList{},
 				"p-unknown": &api.DeviceIdList{},
 			},
@@ -291,7 +291,7 @@ func saveServiceConfig(t *testing.T, apiPort string) string {
 	applePem, err := test.GetPathToIOSCertificatePem()
 	require.NoError(t, err)
 
-	fcmKey, err := test.GetAccountKey()
+	gcmKey, err := test.GetAccountKey()
 	require.NoError(t, err)
 
 	fcmServiceAccount, err := test.GetPathToGoogleServiceAccount()
@@ -305,15 +305,15 @@ func saveServiceConfig(t *testing.T, apiPort string) string {
 	fileData := `
 grpc-port: ` + apiPort + `
 http-port: ` + adminPort + `
-fcm-v1:
+fcm:
   - project-id: p-fcm
     service-account: ` + fcmServiceAccount + `
     send-tries: 10
     send-timeout: 2s
     allow-alerts: true
 google:
-  - project-id: p-google
-    key: ` + fcmKey + `
+  - project-id: p-gcm
+    key: ` + string(gcmKey) + `
     retries: 10
     allow-alerts: true
 apple:

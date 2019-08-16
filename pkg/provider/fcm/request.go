@@ -9,28 +9,6 @@ const (
 // https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages#androidmessagepriority
 type AndroidMessagePriority string
 
-// Request format:
-// https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages/send#request-body
-type Request struct {
-	ValidateOnly bool    `json:"validate_only,omitempty"`
-	Message      Message `json:"message"`
-}
-
-// Message format:
-// https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages#Message
-type Message struct {
-	Name         string            `json:"name,omitempty"`
-	Token        string            `json:"token,omitempty"`
-	Topic        string            `json:"topic,omitempty"`
-	Condition    string            `json:"condition,omitempty"`
-	Data         map[string]string `json:"data,omitempty"`
-	Notification *Notification     `json:"notification,omitempty"`
-	Android      *AndroidConfig    `json:"android,omitempty"`
-	Webpush      *WebpushConfig    `json:"webpush,omitempty"`
-	Apns         *ApnsConfig       `json:"apns,omitempty"`
-	FcmOptions   *FcmOptions       `json:"fcm_options,omitempty"`
-}
-
 // Notification format:
 // https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages#notification
 type Notification struct {
@@ -109,4 +87,25 @@ type ApnsFcmOptions struct {
 // https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages#fcmoptions
 type FcmOptions struct {
 	AnalyticsLabel string `json:"analytics_label,omitempty"`
+}
+
+// Message format:
+// https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages#Message
+type Message struct {
+	Name         string            `json:"name,omitempty"`
+	Token        string            `json:"token,omitempty"`
+	Topic        string            `json:"topic,omitempty"`
+	Condition    string            `json:"condition,omitempty"`
+	Data         map[string]string `json:"data,omitempty"`
+	Notification *Notification     `json:"notification,omitempty"`
+	Android      *AndroidConfig    `json:"android,omitempty"`
+	Webpush      *WebpushConfig    `json:"webpush,omitempty"`
+	Apns         *ApnsConfig       `json:"apns,omitempty"`
+	FcmOptions   *FcmOptions       `json:"fcm_options,omitempty"`
+}
+
+func (m *Message) SetToken(token string) {
+	if m != nil {
+		m.Token = token
+	}
 }

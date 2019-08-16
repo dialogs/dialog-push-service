@@ -24,6 +24,52 @@ func TestSendOk(t *testing.T) {
 
 	client := getClient(t)
 
+	req := &Request{
+		Token:   getDeviceToken(t),
+		Payload: getPayload(t),
+	}
+
+	res, err := client.Send(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, res.ID, 36) // example: CDB997A0-0C7C-8E2E-DBB5-13E89D5C756E
+
+	require.Equal(t,
+		&Response{
+			ID:         res.ID,
+			StatusCode: 200,
+			Body: ResponseBody{
+				Reason:    "",
+				Timestamp: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+		},
+		res)
+}
+
+func TestSendError(t *testing.T) {
+
+	client := getClient(t)
+
+	req := &Request{
+		Payload: getPayload(t),
+	}
+	res, err := client.Send(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, res.ID, 36) // example: CDB997A0-0C7C-8E2E-DBB5-13E89D5C756E
+
+	require.Equal(t,
+		&Response{
+			ID:         res.ID,
+			StatusCode: 400,
+			Body: ResponseBody{
+				Reason:    "MissingDeviceToken",
+				Timestamp: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+		},
+		res)
+}
+
+func getPayload(t *testing.T) []byte {
+
 	payload := map[string]interface{}{
 		"aps": map[string]interface{}{
 			"alert": map[string]interface{}{
@@ -36,79 +82,14 @@ func TestSendOk(t *testing.T) {
 	jPayload, err := json.Marshal(payload)
 	require.NoError(t, err)
 
-	req := &Request{
-		Token:   getDeviceToken(t),
-		Payload: jPayload,
-	}
-
-	res, err := client.Send(context.Background(), req)
-	require.NoError(t, err)
-	require.Len(t, res.ID, 36) // example: CDB997A0-0C7C-8E2E-DBB5-13E89D5C756E
-
-	require.Equal(t,
-		&Response{
-			ID:         res.ID,
-			StatusCode: 200,
-			Reason:     "",
-			Timestamp:  time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
-		},
-		res)
-}
-
-func TestSendError(t *testing.T) {
-
-	client := getClient(t)
-
-	req := &Request{}
-	res, err := client.Send(context.Background(), req)
-	require.NoError(t, err)
-	require.Len(t, res.ID, 36) // example: CDB997A0-0C7C-8E2E-DBB5-13E89D5C756E
-
-	require.Equal(t,
-		&Response{
-			ID:         res.ID,
-			StatusCode: 400,
-			Reason:     "MissingDeviceToken",
-			Timestamp:  time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
-		},
-		res)
-}
-
-func TestGetTopics(t *testing.T) {
-
-	{
-		topics, err := GetTopics([]byte{
-			0x30, 0x18, 0xc, 0x1, 'a',
-			0x30, 0x2, 0xc, 0x2, 'b', 'c',
-			0xc, 0x01, 'd',
-			0x30, 0x3, 0xc, 0x3, 'e', 'f', 'g',
-			0xc, 0x03, 'h', 'i', 'j'})
-		require.NoError(t, err)
-		require.Equal(t, []string{"a", "bc", "d", "efg", "hij"}, topics)
-	}
-
-	{
-		topics, err := GetTopics([]byte{
-			0x30, 0x3, 0xc, 0x1, 'a'})
-		require.NoError(t, err)
-		require.Equal(t, []string{"a"}, topics)
-	}
-
-	{
-		topics, err := GetTopics([]byte{
-			0x30, 0x8, 0xc, 0x1, 'a',
-			0xc, 0x03, 'h', 'i', 'j'})
-		require.NoError(t, err)
-		require.Equal(t, []string{"a", "hij"}, topics)
-	}
-
+	return jPayload
 }
 
 func getClient(t *testing.T) *Client {
 	t.Helper()
 
 	pem := getCertificatePem(t)
-	client, err := NewFromPem(pem, false)
+	client, err := NewFromPem(pem, false, 2, time.Second)
 	require.NoError(t, err)
 
 	return client

@@ -43,8 +43,9 @@ type ErrorCode string
 //   "name": "projects/<project-id>/messages/0:1564476468894369%30820c6b30820c6b"
 // }
 type Response struct {
-	Name  string     `json:"name,omitempty"`
-	Error *SendError `json:"error,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	StatusCode int        `json:"-"`
+	Error      *SendError `json:"error,omitempty"`
 }
 
 // Ok returns true if notification success send
@@ -92,13 +93,4 @@ func (e SendError) Error() string {
 	b.WriteByte(')')
 
 	return b.String()
-}
-
-// IsRemoteError returns true if server returns not client error
-func (e SendError) IsRemoteError() bool {
-
-	return e.Status == ErrorCodeUnregistered ||
-		e.Status == ErrorCodeUnavailable ||
-		e.Status == ErrorCodeInternal ||
-		e.Status == ErrorCodeUnspecified
 }

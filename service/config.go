@@ -7,16 +7,16 @@ import (
 	"github.com/dialogs/dialog-push-service/pkg/worker"
 	"github.com/dialogs/dialog-push-service/pkg/worker/ans"
 	"github.com/dialogs/dialog-push-service/pkg/worker/fcm"
-	"github.com/dialogs/dialog-push-service/pkg/worker/legacyfcm"
+	"github.com/dialogs/dialog-push-service/pkg/worker/gcm"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Fcm       []*fcm.Config       `mapstructure:"-"`
-	LegacyFcm []*legacyfcm.Config `mapstructure:"-"`
-	Ans       []*ans.Config       `mapstructure:"-"`
-	ApiPort   string              `mapstructure:"grpc-port"`
-	AdminPort string              `mapstructure:"http-port"`
+	Fcm       []*fcm.Config `mapstructure:"-"`
+	Gcm       []*gcm.Config `mapstructure:"-"`
+	Ans       []*ans.Config `mapstructure:"-"`
+	ApiPort   string        `mapstructure:"grpc-port"`
+	AdminPort string        `mapstructure:"http-port"`
 }
 
 func NewConfig(src *viper.Viper) (*Config, error) {
@@ -32,12 +32,12 @@ func NewConfig(src *viper.Viper) (*Config, error) {
 		return nil, err
 	}
 
-	c.LegacyFcm, err = getLegacyFcmConfig(src)
+	c.Gcm, err = getGcmConfig(src)
 	if err != nil {
 		return nil, err
 	}
 
-	c.Fcm, err = getFcmV1Config(src)
+	c.Fcm, err = getFcmConfig(src)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (c *Config) WalkConfigs(fn func(interface{}) error) error {
 		}
 	}
 
-	for _, item := range c.LegacyFcm {
+	for _, item := range c.Gcm {
 		if err := fn(item); err != nil {
 			return err
 		}
@@ -68,7 +68,7 @@ func (c *Config) WalkConfigs(fn func(interface{}) error) error {
 	return nil
 }
 
-func getFcmV1Config(src *viper.Viper) ([]*fcm.Config, error) {
+func getFcmConfig(src *viper.Viper) ([]*fcm.Config, error) {
 
 	srcList, err := getConfigListByKey(src, worker.KindFcm.String())
 	if err != nil {
@@ -88,16 +88,16 @@ func getFcmV1Config(src *viper.Viper) ([]*fcm.Config, error) {
 	return retval, nil
 }
 
-func getLegacyFcmConfig(src *viper.Viper) ([]*legacyfcm.Config, error) {
+func getGcmConfig(src *viper.Viper) ([]*gcm.Config, error) {
 
-	srcList, err := getConfigListByKey(src, worker.KindFcmLegacy.String())
+	srcList, err := getConfigListByKey(src, worker.KindGcm.String())
 	if err != nil {
 		return nil, err
 	}
 
-	retval := make([]*legacyfcm.Config, 0, len(srcList))
+	retval := make([]*gcm.Config, 0, len(srcList))
 	for _, item := range srcList {
-		cfg, err := legacyfcm.NewConfig(item)
+		cfg, err := gcm.NewConfig(item)
 		if err != nil {
 			return nil, err
 		}

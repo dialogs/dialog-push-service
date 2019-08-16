@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/dialogs/dialog-push-service/pkg/converter"
 	"github.com/dialogs/dialog-push-service/pkg/metric"
 	"github.com/dialogs/dialog-push-service/pkg/provider/fcm"
 	"github.com/dialogs/dialog-push-service/pkg/test"
@@ -15,8 +14,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
-
-var payload = []byte(`{"message":{"notification":{"title":"title","body":"body text"}}}`)
 
 func TestWokerNew(t *testing.T) {
 
@@ -51,38 +48,6 @@ func TestWokerSendErrInvalidDeviceToken(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestWokerSendErrInvalidIncomingDataType(t *testing.T) {
-
-	cfg := getConfig(t)
-	logger := getLogger(t)
-
-	w, err := New(cfg, logger, metric.New())
-	require.NoError(t, err)
-
-	chOut := w.Send(context.Background(), &worker.Request{
-		Devices: []string{"token1", "token2"},
-	})
-
-	require.Equal(t,
-		&worker.Response{
-			ProjectID:   w.ProjectID(),
-			DeviceToken: "token1",
-			Error:       converter.ErrInvalidIncomingDataType,
-		},
-		<-chOut)
-
-	require.Equal(t,
-		&worker.Response{
-			ProjectID:   w.ProjectID(),
-			DeviceToken: "token2",
-			Error:       converter.ErrInvalidIncomingDataType,
-		},
-		<-chOut)
-
-	_, ok := <-chOut
-	require.False(t, ok)
-}
-
 func TestWokerSendNopOk(t *testing.T) {
 
 	cfg := getConfig(t)
@@ -93,7 +58,7 @@ func TestWokerSendNopOk(t *testing.T) {
 
 	chOut := w.Send(context.Background(), &worker.Request{
 		Devices: []string{"token1", "token2"},
-		Payload: payload,
+		Payload: &fcm.Message{Notification: &fcm.Notification{Title: "title"}},
 	})
 
 	require.Equal(t,
@@ -127,7 +92,7 @@ func TestWokerSendOk(t *testing.T) {
 
 	chOut := w.Send(context.Background(), &worker.Request{
 		Devices: []string{token, "token2", token},
-		Payload: payload,
+		Payload: &fcm.Message{Notification: &fcm.Notification{Title: "title"}},
 	})
 
 	require.Equal(t,
@@ -245,7 +210,6 @@ func getConfig(t *testing.T) *Config {
 		"service-account": getPathToServiceAccount(t),
 		"nop-mode":        "true",
 		"workers":         "-1",
-		"converter-kind":  converter.KindBinary.String(),
 	} {
 		src.Set(k, v)
 	}

@@ -91,11 +91,11 @@ func GetGoogleCloudMessageSettings() ([]byte, error) {
 	return jsonData, nil
 }
 
-func GetAccountKey() (string, error) {
+func GetAccountKey() ([]byte, error) {
 
 	data, err := GetGoogleCloudMessageSettings()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	settings := &struct {
@@ -104,8 +104,8 @@ func GetAccountKey() (string, error) {
 
 	r := bytes.NewReader(data)
 	if err := json.NewDecoder(r).Decode(settings); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return settings.Key, nil
+	return []byte(settings.Key), nil
 }
