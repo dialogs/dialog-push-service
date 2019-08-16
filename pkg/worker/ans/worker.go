@@ -28,7 +28,7 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 		return nil, err
 	}
 
-	provider, err := ans.NewFromPem(pem, cfg.Sandbox, cfg.SendTries, cfg.SendTimeout)
+	provider, err := ans.NewFromPem(pem, cfg.Sandbox, cfg.Retries, cfg.Timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +52,8 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 	return w, nil
 }
 
-func (w *Worker) ExistVoIP() bool {
-	return w.provider.ExistVoIP()
+func (w *Worker) SupportsVoIP() bool {
+	return w.provider.SupportsVoIP()
 }
 
 func (w *Worker) sendNotification(ctx context.Context, in provider.IRequest) error {

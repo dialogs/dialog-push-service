@@ -23,25 +23,25 @@ type Client struct {
 	endpointPrefix string
 	certTLS        tls.Certificate
 	sandbox        bool
-	sendTries      int
-	existVoIP      bool
+	retries        int
+	supportsVoIP   bool
 }
 
-func New(certTLS *tls.Certificate, isSandbox bool, sendTries int, timeout time.Duration) (*Client, error) {
+func New(certTLS *tls.Certificate, isSandbox bool, retries int, timeout time.Duration) (*Client, error) {
 
 	hasDevelopCert, err := ExistOID(certTLS, OidPushDevelop)
 	if err != nil {
-		return nil, errors.Wrap(err, "check develop certificate type")
+		return nil, errors.Wrap(err, "failed to read certificate property 'Apple Push Notification service Development'")
 	}
 
 	hasProductionCert, err := ExistOID(certTLS, OidPushProduction)
 	if err != nil {
-		return nil, errors.Wrap(err, "check production certificate type")
+		return nil, errors.Wrap(err, "failed to read certificate property 'Apple Push Notification service Production'")
 	}
 
-	existVoIP, err := ExistOID(certTLS, OidVoIP)
+	supportsVoIP, err := ExistOID(certTLS, OidVoIP)
 	if err != nil {
-		return nil, errors.Wrap(err, "check VoIP mode")
+		return nil, errors.Wrap(err, "failed to read certificate property 'supports VoIP'")
 	}
 
 	sandbox := hasDevelopCert && (!hasProductionCert || isSandbox)
@@ -51,10 +51,6 @@ func New(certTLS *tls.Certificate, isSandbox bool, sendTries int, timeout time.D
 		endpointPrefix = "https://api.development.push.apple.com"
 	}
 	endpointPrefix += "/3/device/"
-
-	if sendTries <= 0 {
-		sendTries = 2
-	}
 
 	if timeout <= 0 {
 		timeout = time.Second * 10
@@ -67,19 +63,19 @@ func New(certTLS *tls.Certificate, isSandbox bool, sendTries int, timeout time.D
 		endpointPrefix: endpointPrefix,
 		certTLS:        *certTLS,
 		sandbox:        sandbox,
-		sendTries:      sendTries,
-		existVoIP:      existVoIP,
+		retries:        retries,
+		supportsVoIP:   supportsVoIP,
 	}, nil
 }
 
-func NewFromPem(pemData []byte, isSandbox bool, sendTries int, timeout time.Duration) (*Client, error) {
+func NewFromPem(pemData []byte, isSandbox bool, retries int, timeout time.Duration) (*Client, error) {
 
 	certTLS, err := tls.X509KeyPair(pemData, pemData)
 	if err != nil {
 		return nil, errors.Wrap(err, "read certificate")
 	}
 
-	return New(&certTLS, isSandbox, sendTries, timeout)
+	return New(&certTLS, isSandbox, retries, timeout)
 }
 
 func (c *Client) Certificate() tls.Certificate {
@@ -90,8 +86,8 @@ func (c *Client) Sandbox() bool {
 	return c.sandbox
 }
 
-func (c *Client) ExistVoIP() bool {
-	return c.existVoIP
+func (c *Client) SupportsVoIP() bool {
+	return c.supportsVoIP
 }
 
 func (c *Client) Send(ctx context.Context, message *Request) (retval *Response, err error) {
@@ -110,7 +106,7 @@ func (c *Client) Send(ctx context.Context, message *Request) (retval *Response, 
 		return retval.StatusCode, err
 	}
 
-	err = provider.SendWithRetry(c.sendTries, fnSend)
+	err = provider.SendWithRetry(c.retries, fnSend)
 	if err != nil {
 		return nil, err
 	}

@@ -21,11 +21,7 @@ type Worker struct {
 
 func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, error) {
 
-	if cfg.SendTries <= 0 {
-		cfg.SendTries = 2
-	}
-
-	provider, err := gcm.New([]byte(cfg.ServerKey), cfg.Sandbox, cfg.SendTries, cfg.SendTimeout)
+	provider, err := gcm.New([]byte(cfg.ServerKey), cfg.Sandbox, cfg.Retries, cfg.Timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +45,7 @@ func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, e
 	return w, nil
 }
 
-func (w *Worker) ExistVoIP() bool {
+func (w *Worker) SupportsVoIP() bool {
 	return false
 }
 

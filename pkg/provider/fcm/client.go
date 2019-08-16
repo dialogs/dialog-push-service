@@ -35,8 +35,8 @@ type Client struct {
 	// https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages/send
 	endpoint string
 
-	// count send tries
-	sendTries int
+	// count send retries
+	retries int
 
 	// oauth token
 	token atomic.Value
@@ -48,7 +48,7 @@ type Client struct {
 	sandbox bool
 }
 
-func New(serviceAccount []byte, isSandbox bool, sendTries int, timeout time.Duration) (*Client, error) {
+func New(serviceAccount []byte, isSandbox bool, retries int, timeout time.Duration) (*Client, error) {
 
 	scope := []string{
 		// To authorize access to FCM, request:
@@ -69,17 +69,13 @@ func New(serviceAccount []byte, isSandbox bool, sendTries int, timeout time.Dura
 		return nil, errors.Wrap(err, "account")
 	}
 
-	if sendTries <= 0 {
-		sendTries = 2
-	}
-
 	if timeout <= 0 {
 		timeout = time.Second * 10
 	}
 
 	return &Client{
 		endpoint:  getEndpoint(account.ProjectID),
-		sendTries: sendTries,
+		retries:   retries,
 		jwtConfig: jwtConfig,
 		sandbox:   isSandbox,
 		client: &http.Client{
@@ -113,7 +109,7 @@ func (c *Client) Send(ctx context.Context, message *Message) (retval *Response, 
 		return retval.StatusCode, err
 	}
 
-	err = provider.SendWithRetry(c.sendTries, fnSend)
+	err = provider.SendWithRetry(c.retries, fnSend)
 	if err != nil {
 		return nil, err
 	}

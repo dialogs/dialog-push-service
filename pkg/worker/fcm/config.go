@@ -15,8 +15,8 @@ type Config struct {
 	// Path to service account:
 	// https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk
 	ServiceAccount string        `mapstructure:"service-account"`
-	SendTries      int           `mapstructure:"send-tries"`
-	SendTimeout    time.Duration `mapstructure:"send-timeout"`
+	Retries        int           `mapstructure:"retries"`
+	Timeout        time.Duration `mapstructure:"timeout"`
 }
 
 func NewConfig(src *viper.Viper) (*Config, error) {

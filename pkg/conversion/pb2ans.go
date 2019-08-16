@@ -13,7 +13,7 @@ import (
 	"github.com/sideshow/apns2/payload"
 )
 
-func RequestPbToAns(in *api.PushBody, existVoIP, allowAlerts bool, topic, sound *string) (*ans.Request, error) {
+func RequestPbToAns(in *api.PushBody, supportsVoIP, allowAlerts bool, topic, sound *string) (*ans.Request, error) {
 
 	var (
 		out ans.Request
@@ -22,7 +22,7 @@ func RequestPbToAns(in *api.PushBody, existVoIP, allowAlerts bool, topic, sound 
 
 	payload := payload.NewPayload()
 	if voip := in.GetVoipPush(); voip != nil {
-		err = setVoIPPayloadAns(payload, voip, existVoIP)
+		err = setVoIPPayloadAns(payload, voip, supportsVoIP)
 
 	} else if alerting := in.GetAlertingPush(); alerting != nil {
 		setAlertingPayloadAns(payload, alerting, sound, allowAlerts)
@@ -68,9 +68,9 @@ func RequestPbToAns(in *api.PushBody, existVoIP, allowAlerts bool, topic, sound 
 	return &out, nil
 }
 
-func setVoIPPayloadAns(payload *payload.Payload, src *api.VoipPush, existVoIP bool) error {
+func setVoIPPayloadAns(payload *payload.Payload, src *api.VoipPush, supportsVoIP bool) error {
 
-	if !existVoIP {
+	if !supportsVoIP {
 		return errors.New("attempted voip-push using non-voip certificate")
 	}
 

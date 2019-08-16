@@ -16,8 +16,8 @@ type Response struct {
 // Table 8-5APNs JSON data keys
 // https://developer.apple.com/library/archive/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/CommunicatingwithAPNs.html#//apple_ref/doc/uid/TP40008194-CH11-SW1
 type ResponseBody struct {
-	Reason    string    `json:"reason"`
-	Timestamp time.Time `json:"timestamp"`
+	Reason    string `json:"reason"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 func NewResponse(id string, statusCode int) *Response {
@@ -25,4 +25,15 @@ func NewResponse(id string, statusCode int) *Response {
 		ID:         id,
 		StatusCode: statusCode,
 	}
+}
+
+func (r *ResponseBody) GetTimestamp() time.Time {
+
+	if r == nil || r.Timestamp == 0 {
+		return time.Time{}
+	}
+
+	ms := time.Millisecond * time.Duration(r.Timestamp)
+
+	return time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).Add(ms)
 }

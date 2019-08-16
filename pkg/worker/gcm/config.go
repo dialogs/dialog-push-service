@@ -14,9 +14,9 @@ type Config struct {
 
 	// Server key:
 	// https://console.firebase.google.com/project/_/settings/cloudmessaging/
-	ServerKey   string        `mapstructure:"key"`
-	SendTries   int           `mapstructure:"retries"`
-	SendTimeout time.Duration `mapstructure:"send-timeout"`
+	ServerKey string        `mapstructure:"key"`
+	Retries   int           `mapstructure:"retries"`
+	Timeout   time.Duration `mapstructure:"timeout"`
 }
 
 func NewConfig(src *viper.Viper) (*Config, error) {
@@ -34,10 +34,6 @@ func NewConfig(src *viper.Viper) (*Config, error) {
 
 	if strings.TrimSpace(c.ServerKey) == "" {
 		return nil, errors.New("invalid server key")
-	}
-
-	if c.SendTimeout <= 0 {
-		c.SendTimeout = time.Second
 	}
 
 	return c, nil

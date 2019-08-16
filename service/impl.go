@@ -172,7 +172,7 @@ func (i *implGRPC) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) 
 
 				switch w.Kind() {
 				case worker.KindApns:
-					req.Payload, err = conversion.RequestPbToAns(push.Body, w.ExistVoIP(), conversationConfig.AllowAlerts, &conversationConfig.Topic, &conversationConfig.Sound)
+					req.Payload, err = conversion.RequestPbToAns(push.Body, w.SupportsVoIP(), conversationConfig.AllowAlerts, &conversationConfig.Topic, &conversationConfig.Sound)
 				case worker.KindFcm:
 					req.Payload, err = conversion.RequestPbToFcm(push.Body, conversationConfig.AllowAlerts)
 				case worker.KindGcm:

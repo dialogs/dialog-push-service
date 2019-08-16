@@ -11,5 +11,5 @@ type IWorker interface {
 	ProjectID() string
 	Send(context.Context, *Request) <-chan *Response
 	ConversionConfig() *conversion.Config
-	ExistVoIP() bool
+	SupportsVoIP() bool
 }

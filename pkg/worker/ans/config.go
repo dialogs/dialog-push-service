@@ -13,9 +13,9 @@ type Config struct {
 	*worker.Config `mapstructure:"-"`
 
 	// Path to tls file in pem format
-	PemFile     string        `mapstructure:"pem"`
-	SendTries   int           `mapstructure:"send-tries"`
-	SendTimeout time.Duration `mapstructure:"send-timeout"`
+	PemFile string        `mapstructure:"pem"`
+	Retries int           `mapstructure:"retries"`
+	Timeout time.Duration `mapstructure:"timeout"`
 }
 
 func NewConfig(src *viper.Viper) (*Config, error) {

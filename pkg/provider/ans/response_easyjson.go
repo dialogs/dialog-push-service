@@ -39,9 +39,7 @@ func easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns(in *j
 		case "reason":
 			out.Reason = string(in.String())
 		case "timestamp":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Timestamp).UnmarshalJSON(data))
-			}
+			out.Timestamp = int64(in.Int64())
 		default:
 			in.SkipRecursive()
 		}
@@ -64,7 +62,7 @@ func easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns(out *
 	{
 		const prefix string = ",\"timestamp\":"
 		out.RawString(prefix)
-		out.Raw((in.Timestamp).MarshalJSON())
+		out.Int64(int64(in.Timestamp))
 	}
 	out.RawByte('}')
 }

@@ -11,30 +11,30 @@ import (
 
 func TestSendWithRetry(t *testing.T) {
 
-	for tries := 0; tries < 4; tries++ {
+	for maxRetries := 0; maxRetries < 4; maxRetries++ {
 		require.NoError(t,
-			SendWithRetry(tries, func() (int, error) { return 0, nil }))
+			SendWithRetry(maxRetries, func() (int, error) { return 0, nil }))
 
 		require.NoError(t,
-			SendWithRetry(tries, func() (int, error) { return http.StatusOK, nil }))
+			SendWithRetry(maxRetries, func() (int, error) { return http.StatusOK, nil }))
 
 		require.NoError(t,
-			SendWithRetry(tries, func() (int, error) { return http.StatusOK, nil }))
+			SendWithRetry(maxRetries, func() (int, error) { return http.StatusOK, nil }))
 
 		require.NoError(t,
-			SendWithRetry(tries, func() (int, error) { return http.StatusBadRequest, nil }))
+			SendWithRetry(maxRetries, func() (int, error) { return http.StatusBadRequest, nil }))
 
 		require.Equal(t,
 			ErrInternalServerError,
-			SendWithRetry(tries, func() (int, error) { return http.StatusInternalServerError, nil }))
+			SendWithRetry(maxRetries, func() (int, error) { return http.StatusInternalServerError, nil }))
 
 		require.Equal(t,
 			ErrServiceUnavailable,
-			SendWithRetry(tries, func() (int, error) { return http.StatusServiceUnavailable, nil }))
+			SendWithRetry(maxRetries, func() (int, error) { return http.StatusServiceUnavailable, nil }))
 
 		require.Equal(t,
 			context.DeadlineExceeded,
-			SendWithRetry(tries, func() (int, error) { return http.StatusOK, context.DeadlineExceeded }))
+			SendWithRetry(maxRetries, func() (int, error) { return http.StatusOK, context.DeadlineExceeded }))
 	}
 
 	{

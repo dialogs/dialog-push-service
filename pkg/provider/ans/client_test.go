@@ -33,13 +33,18 @@ func TestSendOk(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res.ID, 36) // example: CDB997A0-0C7C-8E2E-DBB5-13E89D5C756E
 
+	var ms int64
+	if ts := res.Body.GetTimestamp(); !ts.IsZero() {
+		ms = ts.UnixNano() / int64(time.Millisecond)
+	}
+
 	require.Equal(t,
 		&Response{
 			ID:         res.ID,
 			StatusCode: 200,
 			Body: ResponseBody{
 				Reason:    "",
-				Timestamp: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+				Timestamp: ms,
 			},
 		},
 		res)
@@ -62,7 +67,7 @@ func TestSendError(t *testing.T) {
 			StatusCode: 400,
 			Body: ResponseBody{
 				Reason:    "MissingDeviceToken",
-				Timestamp: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+				Timestamp: 0,
 			},
 		},
 		res)

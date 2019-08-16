@@ -143,6 +143,7 @@ func CheckVoIPTopicByCert(topic string, cert *tls.Certificate) error {
 		for i := range topicList {
 			if strings.Compare(topicList[i], topic) == 0 {
 				exist = true
+				break
 			}
 		}
 

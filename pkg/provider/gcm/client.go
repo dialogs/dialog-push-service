@@ -20,8 +20,8 @@ const ErrorCodeFailedToReadResponse = "FailedToReadResponse"
 type Client struct {
 	client *http.Client
 
-	// count send tries
-	sendTries int
+	// count send retries
+	retries int
 
 	// authorization key:
 	// https://firebase.google.com/docs/cloud-messaging/migrate-v1#before_2
@@ -30,11 +30,7 @@ type Client struct {
 	sandbox bool
 }
 
-func New(key []byte, isSandbox bool, sendTries int, timeout time.Duration) (*Client, error) {
-
-	if sendTries <= 0 {
-		sendTries = 2
-	}
+func New(key []byte, isSandbox bool, retries int, timeout time.Duration) (*Client, error) {
 
 	if timeout <= 0 {
 		timeout = time.Second * 10
@@ -42,7 +38,7 @@ func New(key []byte, isSandbox bool, sendTries int, timeout time.Duration) (*Cli
 
 	return &Client{
 		headerAuthorization: "key=" + string(key),
-		sendTries:           sendTries,
+		retries:             retries,
 		sandbox:             isSandbox,
 		client: &http.Client{
 			Timeout: timeout,
@@ -74,7 +70,7 @@ func (c *Client) Send(ctx context.Context, message *Request) (retval *Response, 
 		return retval.StatusCode, err
 	}
 
-	err = provider.SendWithRetry(c.sendTries, fnSend)
+	err = provider.SendWithRetry(c.retries, fnSend)
 	if err != nil {
 		return nil, err
 	}

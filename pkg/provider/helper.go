@@ -11,30 +11,30 @@ var (
 	ErrServiceUnavailable  = errors.New("remote push server: service unavailable")
 )
 
-func SendWithRetry(tries int, send func() (statusCode int, _ error)) error {
+func SendWithRetry(maxRetries int, send func() (statusCode int, _ error)) error {
 
-	if tries <= 0 {
-		tries = 1
+	if maxRetries <= 0 {
+		maxRetries = 1
 	}
 
-	for try := 0; try < tries; try++ {
-		hasTries := try < tries-1
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		hasAttempts := attempt < maxRetries-1
 
 		statusCode, err := send()
 		if err != nil {
-			if hasTries && err == context.DeadlineExceeded {
+			if hasAttempts && err == context.DeadlineExceeded {
 				continue
 			}
 			return err
 
 		} else if statusCode == http.StatusInternalServerError {
-			if hasTries {
+			if hasAttempts {
 				continue
 			}
 			return ErrInternalServerError
 
 		} else if statusCode == http.StatusServiceUnavailable {
-			if hasTries {
+			if hasAttempts {
 				continue
 			}
 			return ErrServiceUnavailable

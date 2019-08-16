@@ -30,7 +30,7 @@ google:
   - project-id: <string>
     key: <string>
     retries: <number>
-    send-timeout: <string>
+    timeout: <string>
     nop-mode: <boolean>
     workers: <number>
     allow-alerts: <boolean>
@@ -40,7 +40,7 @@ properties:
 - project-id - identificator of the provider
 - [key](https://firebase.google.com/docs/cloud-messaging/auth-server#authorize_legacy_protocol_send_requests)
 - retries - count retries by server error
-- send-timeout - time duration. Example: 1s, 2m
+- timeout - time duration. Example: 1s, 2m
 - nop-mode - if the option is set to true, the message will not be sent
 - workers - count workers for sending. By default the value is equal count of processors.
 - allow-alerts - enabled alerting messages for converter protobuf push message to a notification message
@@ -49,11 +49,11 @@ properties:
 ### [FCM HTTP v1](https://firebase.google.com/docs/cloud-messaging/concept-options)
 
 ```yaml
-fcm-v1:
+fcm:
   - project-id: <string>
     service-account: <string>
-    send-tries: <number>
-    send-timeout: <string>
+    retries: <number>
+    timeout: <string>
     nop-mode: <boolean>
     workers: <number>
     allow-alerts: <boolean>
@@ -62,8 +62,8 @@ fcm-v1:
 properties:
 - project-id - identificator of the provider
 - [service-account](https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk)
-- send-tries - count retries by server error
-- send-timeout - time duration. Example: 1s, 2m
+- retries - count retries by server error
+- timeout - time duration. Example: 1s, 2m
 - nop-mode - if the option is set to true, the message will not be sent
 - workers - count workers for sending. By default the value is equal count of processors.
 - allow-alerts - enabled alerting messages for converter protobuf push message to a notification message
@@ -75,14 +75,18 @@ properties:
 apple:
   - project-id: <string>
     pem: <string>
+    retries: <number>
+    timeout: <string>
     nop-mode: <boolean>
     workers: <number>
     allow-alerts: <boolean>
     sandbox: <boolean>
 ```
 properties:
-- project-id - identificator of the provider
+- project-id - identifier of the provider
 - pem - path to tls certificate in pem format
+- retries - count retries by server error
+- timeout - time duration. Example: 1s, 2m
 - nop-mode - if the option is set to true, the message will not be sent
 - workers - count workers for sending. By default the value is equal count of processors.
 - allow-alerts - enabled alerting messages for converter protobuf push message to a notification message

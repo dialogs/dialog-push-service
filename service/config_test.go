@@ -45,8 +45,8 @@ func TestConfig(t *testing.T) {
 			Fcm: []*fcm.Config{
 				{
 					ServiceAccount: fcmServiceAccount,
-					SendTries:      10,
-					SendTimeout:    time.Second * 2,
+					Retries:        10,
+					Timeout:        time.Second * 2,
 					Config: &worker.Config{
 						ProjectID:    "p-1",
 						NopMode:      true,
@@ -60,9 +60,9 @@ func TestConfig(t *testing.T) {
 			},
 			Gcm: []*gcm.Config{
 				{
-					ServerKey:   string(gcmKey),
-					SendTries:   10,
-					SendTimeout: time.Second,
+					ServerKey: string(gcmKey),
+					Retries:   10,
+					Timeout:   2 * time.Second,
 					Config: &worker.Config{
 						ProjectID:    "p-2",
 						NopMode:      true,
@@ -77,6 +77,8 @@ func TestConfig(t *testing.T) {
 			Ans: []*ans.Config{
 				{
 					PemFile: applePem,
+					Retries: 10,
+					Timeout: 2 * time.Second,
 					Config: &worker.Config{
 						ProjectID:    "p-3",
 						NopMode:      true,
@@ -104,8 +106,8 @@ fcm:
   - project-id: p-1
     service-account: ` + fcmServiceAccount + `
     nop-mode: true
-    send-tries: 10
-    send-timeout: 2s
+    retries: 10
+    timeout: 2s
     allow-alerts: true
     sandbox: true
     workers: 4
@@ -114,12 +116,15 @@ google:
     key: ` + gcmKey + `
     nop-mode: true
     retries: 10
+    timeout: 2s
     allow-alerts: true
     sandbox: true
     workers: 3
 apple:
   - project-id: p-3
     topic: im.dlg.dialog-ee
+    retries: 10
+    timeout: 2s
     nop-mode: true
     voip: true
     allow-alerts: true
