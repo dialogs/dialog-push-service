@@ -129,4 +129,4 @@ docker-run:
 
 .PHONY: scala-publish-local
 scala-publish-local:
-	sbt clean compile publish-local
+	sbt clean compile +publishLocal
