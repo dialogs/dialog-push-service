@@ -3,14 +3,16 @@ PACKAGES_WITH_TESTS:=$(shell go list -f="{{if or .TestGoFiles .XTestGoFiles}}{{.
 TEST_TARGETS:=$(foreach p,${PACKAGES_WITH_TESTS},test-$(p))
 TEST_OUT_DIR:=testout
 
-TAG            := 0.0.1
-PROJECT        := dialog-push-service
-COMMIT         := $(shell git rev-parse --short HEAD)
-DOCKER_REGISTRY?=
-IMAGE          := ${DOCKER_REGISTRY}${PROJECT}:${TAG}
-SCALA_PB       := github.com/scalapb/ScalaPB
-PROTO_SRC      := src/main/protobuf
+SCALA_PB  := github.com/scalapb/ScalaPB
+PROTO_SRC := src/main/protobuf
 
+DOCKER_TARGET_REGISTRY   ?=
+BUILD_NUMBER             ?= 1
+GIT_LAST_COMMIT_ID       ?= $(shell git rev-parse --short HEAD)
+GIT_CURRENT_BRANCH       ?= $(shell git rev-parse --abbrev-ref HEAD)
+DOCKER_TARGET_IMAGE_TAG  ?= $(BUILD_NUMBER)-$(subst ee,EE,$(GIT_CURRENT_BRANCH))-$(GIT_LAST_COMMIT_ID)
+DOCKER_TARGET_IMAGE_NAME ?= $(shell basename $(shell git rev-parse --show-toplevel))
+DOCKER_TARGET_IMAGE      ?= $(DOCKER_TARGET_REGISTRY)$(DOCKER_TARGET_IMAGE_NAME):$(DOCKER_TARGET_IMAGE_TAG)
 
 .PHONY: all
 all: gencode mod proto-golang proto-py lint testall docker-build
@@ -104,14 +106,14 @@ $(TEST_TARGETS):
 
 .PHONY: docker-build
 docker-build:
-	-docker rm -f `docker ps -a -q --filter=ancestor=${IMAGE}`
-	-docker rmi -f `docker images -q ${IMAGE}`
+	-docker rm -f `docker ps -a -q --filter=ancestor=${DOCKER_TARGET_IMAGE}`
+	-docker rmi -f `docker images -q ${DOCKER_TARGET_IMAGE}`
 	-docker rmi $(docker images -f "dangling=true" -q)
 
 	docker build -f Dockerfile \
-	--tag ${IMAGE} \
-	--build-arg "COMMIT=${COMMIT}" \
-	--build-arg "RELEASE=${TAG}" \
+	--tag ${DOCKER_TARGET_IMAGE} \
+	--build-arg "COMMIT=${GIT_LAST_COMMIT_ID}" \
+	--build-arg "RELEASE=${DOCKER_TARGET_IMAGE_TAG}" \
 	.
 
 .PHONY: docker-run
@@ -124,7 +126,7 @@ docker-run:
 	-v "${HOME}/<...>.pem:/config/production-big-voip.pem" \
 	-v "${HOME}/<...>.pem:/config/production-ee.pem" \
 	-v "${HOME}/<...>.pem:/config/production-ee-voip.pem" \
-	${IMAGE} \
+	${DOCKER_TARGET_IMAGE} \
 	sh -c "/push-server -c /var/config/example.yaml"
 
 .PHONY: scala-publish-local
