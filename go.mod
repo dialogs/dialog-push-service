@@ -16,5 +16,5 @@ require (
 	go.uber.org/zap v1.9.1
 	golang.org/x/net v0.0.0-20190424112056-4829fb13d2c6
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	google.golang.org/grpc v1.20.1
+	google.golang.org/grpc v1.23.0
 )
