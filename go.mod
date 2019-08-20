@@ -11,7 +11,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0
 	github.com/sideshow/apns2 v0.0.0-20171218084920-df275e5c35d2
-	github.com/spf13/viper v1.3.2
+	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.3.0
 	go.uber.org/zap v1.9.1
 	golang.org/x/net v0.0.0-20190424112056-4829fb13d2c6
