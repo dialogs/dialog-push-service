@@ -9,7 +9,7 @@ require (
 	github.com/jessevdk/go-flags v1.2.0
 	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v1.0.0
+	github.com/prometheus/client_golang v1.1.0
 	github.com/sideshow/apns2 v0.0.0-20171218084920-df275e5c35d2
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.3.0
