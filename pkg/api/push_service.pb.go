@@ -11,11 +11,8 @@ import (
 	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
 	types "github.com/gogo/protobuf/types"
 	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 	reflect "reflect"
 	strconv "strconv"
 	strings "strings"
@@ -2217,20 +2214,6 @@ type PushingServer interface {
 	SinglePush(context.Context, *Push) (*Response, error)
 }
 
-// UnimplementedPushingServer can be embedded to have forward compatible implementations.
-type UnimplementedPushingServer struct {
-}
-
-func (*UnimplementedPushingServer) Ping(ctx context.Context, req *PingRequest) (*PongResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
-}
-func (*UnimplementedPushingServer) PushStream(srv Pushing_PushStreamServer) error {
-	return status.Errorf(codes.Unimplemented, "method PushStream not implemented")
-}
-func (*UnimplementedPushingServer) SinglePush(ctx context.Context, req *Push) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SinglePush not implemented")
-}
-
 func RegisterPushingServer(s *grpc.Server, srv PushingServer) {
 	s.RegisterService(&_Pushing_serviceDesc, srv)
 }
@@ -2467,16 +2450,16 @@ func (m *AlertingPush) MarshalTo(dAtA []byte) (int, error) {
 	var l int
 	_ = l
 	if m.AlertBody != nil {
-		nn1, err1 := m.AlertBody.MarshalTo(dAtA[i:])
-		if err1 != nil {
-			return 0, err1
+		nn1, err := m.AlertBody.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += nn1
 	}
 	if m.AlertTitle != nil {
-		nn2, err2 := m.AlertTitle.MarshalTo(dAtA[i:])
-		if err2 != nil {
-			return 0, err2
+		nn2, err := m.AlertTitle.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += nn2
 	}
@@ -2489,9 +2472,9 @@ func (m *AlertingPush) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x3a
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.Peer.Size()))
-		n3, err3 := m.Peer.MarshalTo(dAtA[i:])
-		if err3 != nil {
-			return 0, err3
+		n3, err := m.Peer.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n3
 	}
@@ -2499,9 +2482,9 @@ func (m *AlertingPush) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x42
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.Mid.Size()))
-		n4, err4 := m.Mid.MarshalTo(dAtA[i:])
-		if err4 != nil {
-			return 0, err4
+		n4, err := m.Mid.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n4
 	}
@@ -2509,9 +2492,9 @@ func (m *AlertingPush) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x4a
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.Category.Size()))
-		n5, err5 := m.Category.MarshalTo(dAtA[i:])
-		if err5 != nil {
-			return 0, err5
+		n5, err := m.Category.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n5
 	}
@@ -2524,9 +2507,9 @@ func (m *AlertingPush_LocAlertBody) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.LocAlertBody.Size()))
-		n6, err6 := m.LocAlertBody.MarshalTo(dAtA[i:])
-		if err6 != nil {
-			return 0, err6
+		n6, err := m.LocAlertBody.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n6
 	}
@@ -2546,9 +2529,9 @@ func (m *AlertingPush_LocAlertTitle) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.LocAlertTitle.Size()))
-		n7, err7 := m.LocAlertTitle.MarshalTo(dAtA[i:])
-		if err7 != nil {
-			return 0, err7
+		n7, err := m.LocAlertTitle.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n7
 	}
@@ -2603,9 +2586,9 @@ func (m *VoipPush) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x2a
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.Peer.Size()))
-		n8, err8 := m.Peer.MarshalTo(dAtA[i:])
-		if err8 != nil {
-			return 0, err8
+		n8, err := m.Peer.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n8
 	}
@@ -2625,9 +2608,9 @@ func (m *VoipPush) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x42
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.OutPeer.Size()))
-		n9, err9 := m.OutPeer.MarshalTo(dAtA[i:])
-		if err9 != nil {
-			return 0, err9
+		n9, err := m.OutPeer.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n9
 	}
@@ -2663,9 +2646,9 @@ func (m *EncryptedPush) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.PublicAlertingPush.Size()))
-		n10, err10 := m.PublicAlertingPush.MarshalTo(dAtA[i:])
-		if err10 != nil {
-			return 0, err10
+		n10, err := m.PublicAlertingPush.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n10
 	}
@@ -2715,9 +2698,9 @@ func (m *PushBody) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintPushService(dAtA, i, uint64(m.Seq))
 	}
 	if m.Body != nil {
-		nn11, err11 := m.Body.MarshalTo(dAtA[i:])
-		if err11 != nil {
-			return 0, err11
+		nn11, err := m.Body.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += nn11
 	}
@@ -2730,9 +2713,9 @@ func (m *PushBody_SilentPush) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x22
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.SilentPush.Size()))
-		n12, err12 := m.SilentPush.MarshalTo(dAtA[i:])
-		if err12 != nil {
-			return 0, err12
+		n12, err := m.SilentPush.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n12
 	}
@@ -2744,9 +2727,9 @@ func (m *PushBody_AlertingPush) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x2a
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.AlertingPush.Size()))
-		n13, err13 := m.AlertingPush.MarshalTo(dAtA[i:])
-		if err13 != nil {
-			return 0, err13
+		n13, err := m.AlertingPush.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n13
 	}
@@ -2758,9 +2741,9 @@ func (m *PushBody_VoipPush) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x32
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.VoipPush.Size()))
-		n14, err14 := m.VoipPush.MarshalTo(dAtA[i:])
-		if err14 != nil {
-			return 0, err14
+		n14, err := m.VoipPush.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n14
 	}
@@ -2772,9 +2755,9 @@ func (m *PushBody_EncryptedPush) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x3a
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.EncryptedPush.Size()))
-		n15, err15 := m.EncryptedPush.MarshalTo(dAtA[i:])
-		if err15 != nil {
-			return 0, err15
+		n15, err := m.EncryptedPush.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n15
 	}
@@ -2848,9 +2831,9 @@ func (m *Push) MarshalTo(dAtA []byte) (int, error) {
 				dAtA[i] = 0x12
 				i++
 				i = encodeVarintPushService(dAtA, i, uint64(v.Size()))
-				n16, err16 := v.MarshalTo(dAtA[i:])
-				if err16 != nil {
-					return 0, err16
+				n16, err := v.MarshalTo(dAtA[i:])
+				if err != nil {
+					return 0, err
 				}
 				i += n16
 			}
@@ -2860,9 +2843,9 @@ func (m *Push) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.Body.Size()))
-		n17, err17 := m.Body.MarshalTo(dAtA[i:])
-		if err17 != nil {
-			return 0, err17
+		n17, err := m.Body.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n17
 	}
@@ -2910,9 +2893,9 @@ func (m *Response) MarshalTo(dAtA []byte) (int, error) {
 				dAtA[i] = 0x12
 				i++
 				i = encodeVarintPushService(dAtA, i, uint64(v.Size()))
-				n18, err18 := v.MarshalTo(dAtA[i:])
-				if err18 != nil {
-					return 0, err18
+				n18, err := v.MarshalTo(dAtA[i:])
+				if err != nil {
+					return 0, err
 				}
 				i += n18
 			}
@@ -3327,7 +3310,14 @@ func (m *PongResponse) Size() (n int) {
 }
 
 func sovPushService(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozPushService(x uint64) (n int) {
 	return sovPushService(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -3385,7 +3375,7 @@ func (this *AlertingPush) String() string {
 		`AlertBody:` + fmt.Sprintf("%v", this.AlertBody) + `,`,
 		`AlertTitle:` + fmt.Sprintf("%v", this.AlertTitle) + `,`,
 		`Badge:` + fmt.Sprintf("%v", this.Badge) + `,`,
-		`Peer:` + strings.Replace(this.Peer.String(), "Peer", "Peer", 1) + `,`,
+		`Peer:` + strings.Replace(fmt.Sprintf("%v", this.Peer), "Peer", "Peer", 1) + `,`,
 		`Mid:` + strings.Replace(fmt.Sprintf("%v", this.Mid), "StringValue", "types.StringValue", 1) + `,`,
 		`Category:` + strings.Replace(fmt.Sprintf("%v", this.Category), "StringValue", "types.StringValue", 1) + `,`,
 		`}`,
@@ -3441,10 +3431,10 @@ func (this *VoipPush) String() string {
 		`AttemptIndex:` + fmt.Sprintf("%v", this.AttemptIndex) + `,`,
 		`DisplayName:` + fmt.Sprintf("%v", this.DisplayName) + `,`,
 		`EventBusId:` + fmt.Sprintf("%v", this.EventBusId) + `,`,
-		`Peer:` + strings.Replace(this.Peer.String(), "Peer", "Peer", 1) + `,`,
+		`Peer:` + strings.Replace(fmt.Sprintf("%v", this.Peer), "Peer", "Peer", 1) + `,`,
 		`UpdateType:` + fmt.Sprintf("%v", this.UpdateType) + `,`,
 		`DisposalReason:` + fmt.Sprintf("%v", this.DisposalReason) + `,`,
-		`OutPeer:` + strings.Replace(this.OutPeer.String(), "OutPeer", "OutPeer", 1) + `,`,
+		`OutPeer:` + strings.Replace(fmt.Sprintf("%v", this.OutPeer), "OutPeer", "OutPeer", 1) + `,`,
 		`Video:` + fmt.Sprintf("%v", this.Video) + `,`,
 		`}`,
 	}, "")
@@ -3455,7 +3445,7 @@ func (this *EncryptedPush) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&EncryptedPush{`,
-		`PublicAlertingPush:` + strings.Replace(this.PublicAlertingPush.String(), "AlertingPush", "AlertingPush", 1) + `,`,
+		`PublicAlertingPush:` + strings.Replace(fmt.Sprintf("%v", this.PublicAlertingPush), "AlertingPush", "AlertingPush", 1) + `,`,
 		`EncryptedData:` + fmt.Sprintf("%v", this.EncryptedData) + `,`,
 		`Nonce:` + fmt.Sprintf("%v", this.Nonce) + `,`,
 		`}`,
@@ -3541,7 +3531,7 @@ func (this *Push) String() string {
 	mapStringForDestinations += "}"
 	s := strings.Join([]string{`&Push{`,
 		`Destinations:` + mapStringForDestinations + `,`,
-		`Body:` + strings.Replace(this.Body.String(), "PushBody", "PushBody", 1) + `,`,
+		`Body:` + strings.Replace(fmt.Sprintf("%v", this.Body), "PushBody", "PushBody", 1) + `,`,
 		`CorrelationId:` + fmt.Sprintf("%v", this.CorrelationId) + `,`,
 		`}`,
 	}, "")
