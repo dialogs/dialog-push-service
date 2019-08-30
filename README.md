@@ -117,6 +117,13 @@ properties:
 ```
 9. create environment variable __PUSH_DEVICES__ with path to *devices tokens file*
 
+## Metrics
+
+Metrics split by provider type and project identifier:
+- *processed_tasks* -quantity of successfully sent push-notifications.
+- *failed_tasks* - quantity of push-notifications with errors.
+- *io* - time of sending push-notifications
+- *pushes_recv* - quantity  of push-notifications received from IP of a sender.
 
 ## Client application
 
