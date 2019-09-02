@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/dialogs/dialog-go-lib v1.1.12
-	github.com/gogo/protobuf v1.2.1
+	github.com/gogo/protobuf v1.3.0
 	github.com/jessevdk/go-flags v1.2.0
 	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e
 	github.com/pkg/errors v0.8.1
