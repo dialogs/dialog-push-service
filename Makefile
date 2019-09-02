@@ -6,6 +6,8 @@ TEST_OUT_DIR:=testout
 SCALA_PB  := github.com/scalapb/ScalaPB
 PROTO_SRC := src/main/protobuf
 
+PROJECT=github.com/dialogs/dialog-push-service
+
 DOCKER_TARGET_REGISTRY   ?=
 BUILD_NUMBER             ?= 1
 GIT_LAST_COMMIT_ID       ?= $(shell git rev-parse --short HEAD)
@@ -15,11 +17,12 @@ DOCKER_TARGET_IMAGE_NAME ?= $(shell basename $(shell git rev-parse --show-toplev
 DOCKER_TARGET_IMAGE      ?= $(DOCKER_TARGET_REGISTRY)$(DOCKER_TARGET_IMAGE_NAME):$(DOCKER_TARGET_IMAGE_TAG)
 
 .PHONY: all
-all: gencode mod proto-golang proto-py lint testall docker-build
+all: gencode proto-golang proto-py mod lint testall docker-build
 
 .PHONY: mod
 mod:
 	rm -rf vendor
+	GO111MODULE=on go mod tidy
 	GO111MODULE=on go mod download
 	GO111MODULE=on go mod vendor
 
@@ -29,31 +32,25 @@ mod:
 
 .PHONY: lint
 lint:
-ifeq ($(shell command -v golangci-lint 2> /dev/null),)
-	GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.17.0
-endif
+	docker run -it --rm \
+	-v "$(shell pwd):/go/src/${PROJECT}" \
+	-w "/go/src/${PROJECT}" \
+	go-tools-linter:1.0.0 \
 	golangci-lint run ./... --exclude "is deprecated"
 
 .PHONY: gencode
 gencode:
-ifeq ($(shell command -v easyjson 2> /dev/null),)
-	go get -u github.com/mailru/easyjson/...
-endif
-
-	$(eval $@_target := pkg/provider/fcm)
-	rm -f ${$@_target}/*_easyjson.go
-	easyjson -all ${$@_target}/request.go
-	easyjson -all ${$@_target}/response.go
-
-	$(eval $@_target := pkg/provider/ans)
-	rm -f ${$@_target}/*_easyjson.go
-	easyjson -all ${$@_target}/request.go
-	easyjson -all ${$@_target}/response.go
-
-	$(eval $@_target := pkg/provider/gcm)
-	rm -f ${$@_target}/*_easyjson.go
-	easyjson -all ${$@_target}/request.go
-	easyjson -all ${$@_target}/response.go
+	docker run -it --rm \
+	-v "$(shell pwd):/go/src/${PROJECT}" \
+	-w "/go/src/${PROJECT}/" \
+	go-tools-easyjson:1.0.0 \
+	rm -fv pkg/provider/*/*_easyjson.go && \
+	easyjson -all pkg/provider/fcm/request.go && \
+	easyjson -all pkg/provider/fcm/response.go && \
+	easyjson -all pkg/provider/ans/request.go && \
+	easyjson -all pkg/provider/ans/response.go && \
+	easyjson -all pkg/provider/gcm/request.go && \
+	easyjson -all pkg/provider/gcm/response.go
 
 .PHONY: proto-golang
 proto-golang:
@@ -61,6 +58,10 @@ proto-golang:
 
 	rm -f ${$@_target}/*.pb.go
 
+	docker run -it --rm \
+	-v "$(shell pwd):/go/src/${PROJECT}" \
+	-w "/go/src/${PROJECT}" \
+	go-tools-protoc:1.0.0 \
 	protoc \
 	-I=${PROTO_SRC} \
 	-I=vendor/${SCALA_PB}/protobuf \
