@@ -94,7 +94,7 @@ func getClient(t *testing.T) *Client {
 	t.Helper()
 
 	pem := getCertificatePem(t)
-	client, err := NewFromPem(pem, false, 2, time.Second)
+	client, err := NewFromPem(pem, false, 2, 0)
 	require.NoError(t, err)
 
 	return client

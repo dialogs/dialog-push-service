@@ -1,10 +1,13 @@
 package ans
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/dialogs/dialog-push-service/pkg/metric"
@@ -23,12 +26,30 @@ type Worker struct {
 
 func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, error) {
 
-	pem, err := ioutil.ReadFile(cfg.PemFile)
+	fPem, err := os.Open(cfg.PemFile)
 	if err != nil {
 		return nil, err
 	}
+	defer fPem.Close()
 
-	provider, err := ans.NewFromPem(pem, cfg.Sandbox, cfg.Retries, cfg.Timeout)
+	// SAST: exception 'utils.ReadFile prone to resource exhaustion'
+	pemSize, err := fPem.Seek(0, io.SeekEnd)
+	if err != nil {
+		return nil, err
+	} else if pemSize > 1024*1024*10 {
+		return nil, fmt.Errorf("invalid pem file size: %d", pemSize)
+	}
+
+	if _, err := fPem.Seek(0, io.SeekStart); err != nil {
+		return nil, err
+	}
+
+	pem := bytes.NewBuffer(make([]byte, 0, pemSize))
+	if _, err := io.Copy(pem, fPem); err != nil {
+		return nil, err
+	}
+
+	provider, err := ans.NewFromPem(pem.Bytes(), cfg.Sandbox, cfg.Retries, cfg.Timeout)
 	if err != nil {
 		return nil, err
 	}
