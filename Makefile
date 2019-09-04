@@ -12,7 +12,7 @@ DOCKER_TARGET_REGISTRY   ?=
 BUILD_NUMBER             ?= 1
 GIT_LAST_COMMIT_ID       ?= $(shell git rev-parse --short HEAD)
 GIT_CURRENT_BRANCH       ?= $(shell git rev-parse --abbrev-ref HEAD)
-DOCKER_TARGET_IMAGE_TAG  ?= $(BUILD_NUMBER)-$(subst ee,EE,$(GIT_CURRENT_BRANCH))-$(GIT_LAST_COMMIT_ID)
+DOCKER_TARGET_IMAGE_TAG  ?= $(BUILD_NUMBER)-$(subst /,-,$(GIT_CURRENT_BRANCH))-$(GIT_LAST_COMMIT_ID)
 DOCKER_TARGET_IMAGE_NAME ?= $(shell basename $(shell git rev-parse --show-toplevel))
 DOCKER_TARGET_IMAGE      ?= $(DOCKER_TARGET_REGISTRY)$(DOCKER_TARGET_IMAGE_NAME):$(DOCKER_TARGET_IMAGE_TAG)
 

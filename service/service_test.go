@@ -33,6 +33,10 @@ func TestService(t *testing.T) {
 	address := listener.Addr().String()
 	require.NoError(t, listener.Close())
 
+	// SAST: exception 'gets dinamic data'
+	if len(address) > 50 {
+		panic("invalid address length:" + address)
+	}
 	_, apiPort, err := net.SplitHostPort(address)
 	require.NoError(t, err)
 
