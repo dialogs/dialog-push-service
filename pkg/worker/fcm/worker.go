@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 
 	"github.com/dialogs/dialog-push-service/pkg/metric"
 	"github.com/dialogs/dialog-push-service/pkg/provider"
@@ -24,7 +23,7 @@ type Worker struct {
 
 func New(cfg *Config, logger *zap.Logger, svcMetric *metric.Service) (*Worker, error) {
 
-	serviceAccount, err := ioutil.ReadFile(cfg.ServiceAccount)
+	serviceAccount, err := worker.ReadFile(cfg.ServiceAccount, 1024*1024*10)
 	if err != nil {
 		return nil, err
 	}
