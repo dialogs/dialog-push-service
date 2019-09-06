@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"github.com/gogo/protobuf/types"
-	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"log"
@@ -228,7 +227,6 @@ func testSinglePushSuccess(t *testing.T, conn *grpc.ClientConn) {
 	require.NotEmpty(t, ios)
 	require.NotEmpty(t, android)
 
-	logrus.Info("===test11====")
 	res, err := client.SinglePush(context.Background(), &api.Push{
 		Destinations: map[string]*api.DeviceIdList{
 			"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", android, "token1"}},
@@ -275,7 +273,6 @@ func testSingleAlertingPushSuccess(t *testing.T, conn *grpc.ClientConn) {
 	require.NotEmpty(t, ios)
 	require.NotEmpty(t, android)
 
-	logrus.Info("===test12====")
 	res, err := client.SinglePush(context.Background(), &api.Push{
 		Destinations: map[string]*api.DeviceIdList{
 			"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", android, "token1"}},
@@ -294,10 +291,6 @@ func testSingleAlertingPushSuccess(t *testing.T, conn *grpc.ClientConn) {
 					Category:   nil,
 				},
 			},
-				//EncryptedPush: &api.EncryptedPush{
-				//	EncryptedData: []byte("push body"),
-				//},
-			//},
 		},
 	})
 
