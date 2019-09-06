@@ -19,4 +19,5 @@ target/
 /pkg/test/app/android/app/build
 /pkg/test/app/android/app/libs
 /pkg/test/app/android/app/app.iml
+/pkg/test/app/android/local.properties
 google-services.json

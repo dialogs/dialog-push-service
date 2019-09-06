@@ -28,7 +28,7 @@ func RequestPbToAns(in *api.PushBody, supportsVoIP, allowAlerts bool, topic, sou
 		setAlertingPayloadAns(payload, alerting, sound, allowAlerts)
 
 	} else if encryped := in.GetEncryptedPush(); encryped != nil {
-		err = setEncryptedPayload(payload, encryped, sound, allowAlerts)
+		err = setEncryptedPayload(payload, encryped, sound)
 
 	} else if silent := in.GetSilentPush(); silent != nil {
 		// ignoring
@@ -111,9 +111,6 @@ func setAlertingPayloadAns(payload *payload.Payload, src *api.AlertingPush, soun
 		setAlertPropsAns(payload, src, sound)
 		payload.MutableContent()
 
-		if mid := src.Mid; mid != nil {
-			payload.Custom("mid", mid.Value)
-		}
 
 		if category := src.Category; category != nil {
 			payload.Custom("category", category.Value)
@@ -131,10 +128,10 @@ func setAlertingPayloadAns(payload *payload.Payload, src *api.AlertingPush, soun
 	}
 }
 
-func setEncryptedPayload(payload *payload.Payload, src *api.EncryptedPush, sound *string, allowAlerts bool) error {
+func setEncryptedPayload(payload *payload.Payload, src *api.EncryptedPush, sound *string) error {
 
 	if public := src.GetPublicAlertingPush(); public != nil {
-		setAlertingPayloadAns(payload, public, sound, allowAlerts)
+		setAlertPropsAns(payload, public, sound)
 	}
 
 	encryptedData := src.GetEncryptedData()
