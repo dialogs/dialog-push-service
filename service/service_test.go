@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"github.com/gogo/protobuf/types"
+	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"log"
@@ -88,6 +90,10 @@ func TestService(t *testing.T) {
 		{
 			Name: "single push: success",
 			Func: func(*testing.T) { testSinglePushSuccess(t, conn) },
+		},
+		{
+			Name: "single push: alerting push success",
+			Func: func(*testing.T) { testSingleAlertingPushSuccess(t, conn) },
 		},
 		{
 			Name: "push stream: invalid incoming data",
@@ -222,6 +228,7 @@ func testSinglePushSuccess(t *testing.T, conn *grpc.ClientConn) {
 	require.NotEmpty(t, ios)
 	require.NotEmpty(t, android)
 
+	logrus.Info("===test11====")
 	res, err := client.SinglePush(context.Background(), &api.Push{
 		Destinations: map[string]*api.DeviceIdList{
 			"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", android, "token1"}},
@@ -232,9 +239,65 @@ func testSinglePushSuccess(t *testing.T, conn *grpc.ClientConn) {
 		Body: &api.PushBody{
 			Body: &api.PushBody_EncryptedPush{
 				EncryptedPush: &api.EncryptedPush{
+					PublicAlertingPush: &api.AlertingPush{
+						AlertBody:  nil,
+						AlertTitle: nil,
+						Badge:      0,
+						Peer:       nil,
+						Mid:        &types.StringValue{Value:"testEncryptedValue"},
+						Category:   nil,
+					},
 					EncryptedData: []byte("push body"),
 				},
 			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.Equal(t,
+		&api.Response{
+			ProjectInvalidations: map[string]*api.DeviceIdList{
+				"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", "token1"}},
+				"p-gcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", "token2"}},
+				"p-apple":   &api.DeviceIdList{DeviceIds: []string{"", "-", "token3"}},
+				"p-unknown": &api.DeviceIdList{},
+			},
+		},
+		res)
+}
+
+func testSingleAlertingPushSuccess(t *testing.T, conn *grpc.ClientConn) {
+
+	client := api.NewPushingClient(conn)
+
+	android, ios, err := test.GetPushDevices()
+	require.NoError(t, err)
+	require.NotEmpty(t, ios)
+	require.NotEmpty(t, android)
+
+	logrus.Info("===test12====")
+	res, err := client.SinglePush(context.Background(), &api.Push{
+		Destinations: map[string]*api.DeviceIdList{
+			"p-fcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", android, "token1"}},
+			"p-gcm":     &api.DeviceIdList{DeviceIds: []string{"", "-", android, "token2"}},
+			"p-apple":   &api.DeviceIdList{DeviceIds: []string{"", "-", ios, "token3"}},
+			"p-unknown": &api.DeviceIdList{DeviceIds: []string{"", "-", android, ios, "token4"}},
+		},
+		Body: &api.PushBody{
+			Body: &api.PushBody_AlertingPush{
+				AlertingPush: &api.AlertingPush{
+					AlertBody:  nil,
+					AlertTitle: nil,
+					Badge:      0,
+					Peer:       nil,
+					Mid:        &types.StringValue{Value:"testMidMessage"},
+					Category:   nil,
+				},
+			},
+				//EncryptedPush: &api.EncryptedPush{
+				//	EncryptedData: []byte("push body"),
+				//},
+			//},
 		},
 	})
 

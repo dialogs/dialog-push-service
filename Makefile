@@ -44,13 +44,14 @@ gencode:
 	-v "$(shell pwd):/go/src/${PROJECT}" \
 	-w "/go/src/${PROJECT}/" \
 	go-tools-easyjson:1.0.0 \
+	sh -c '\
 	rm -fv pkg/provider/*/*_easyjson.go && \
 	easyjson -all pkg/provider/fcm/request.go && \
 	easyjson -all pkg/provider/fcm/response.go && \
 	easyjson -all pkg/provider/ans/request.go && \
 	easyjson -all pkg/provider/ans/response.go && \
 	easyjson -all pkg/provider/gcm/request.go && \
-	easyjson -all pkg/provider/gcm/response.go
+	easyjson -all pkg/provider/gcm/response.go'
 
 .PHONY: proto-golang
 proto-golang:
