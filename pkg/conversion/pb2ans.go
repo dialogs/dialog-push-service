@@ -32,6 +32,7 @@ func RequestPbToAns(in *api.PushBody, supportsVoIP, allowAlerts bool, topic, sou
 
 	} else if silent := in.GetSilentPush(); silent != nil {
 		// ignoring
+		return nil, nil
 
 	} else {
 		err = ErrorByIncomingMessage(in)

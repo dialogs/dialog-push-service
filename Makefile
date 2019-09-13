@@ -6,7 +6,7 @@ TEST_OUT_DIR:=testout
 SCALA_PB  := github.com/scalapb/ScalaPB
 PROTO_SRC := src/main/protobuf
 
-PROJECT=github.com/dialogs/dialog-push-service
+PROJECT:= $(subst ${GOPATH}/src/,,$(shell pwd))
 
 DOCKER_TARGET_REGISTRY   ?=
 BUILD_NUMBER             ?= 1
@@ -44,13 +44,13 @@ gencode:
 	-v "$(shell pwd):/go/src/${PROJECT}" \
 	-w "/go/src/${PROJECT}/" \
 	go-tools-easyjson:1.0.0 \
-	rm -fv pkg/provider/*/*_easyjson.go && \
+	sh -c 'rm -fv pkg/provider/*/*_easyjson.go && \
 	easyjson -all pkg/provider/fcm/request.go && \
 	easyjson -all pkg/provider/fcm/response.go && \
 	easyjson -all pkg/provider/ans/request.go && \
 	easyjson -all pkg/provider/ans/response.go && \
 	easyjson -all pkg/provider/gcm/request.go && \
-	easyjson -all pkg/provider/gcm/response.go
+	easyjson -all pkg/provider/gcm/response.go'
 
 .PHONY: proto-golang
 proto-golang:

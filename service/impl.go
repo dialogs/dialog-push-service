@@ -187,13 +187,15 @@ func (i *implGRPC) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) 
 
 				pushRes := newSendPushResult(projectWorker.ProjectID())
 
-				for res := range projectWorker.Send(ctx, req) {
+				if err == nil && !req.Payload.Ignore() {
+					for res := range projectWorker.Send(ctx, req) {
 
-					if res.Error != nil {
-						workerErr, ok := res.Error.(*worker.ResponseError)
+						if res.Error != nil {
+							workerErr, ok := res.Error.(*worker.ResponseError)
 
-						if ok && (workerErr.Code == worker.ErrorCodeBadDeviceToken) {
-							pushRes.InvalidationDevices = append(pushRes.InvalidationDevices, res.DeviceToken)
+							if ok && (workerErr.Code == worker.ErrorCodeBadDeviceToken) {
+								pushRes.InvalidationDevices = append(pushRes.InvalidationDevices, res.DeviceToken)
+							}
 						}
 					}
 				}

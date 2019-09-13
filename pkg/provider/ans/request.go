@@ -34,3 +34,7 @@ func (r *Request) SetToken(token string) {
 		r.Token = url.QueryEscape(token)
 	}
 }
+
+func (r *Request) Ignore() bool {
+	return r == nil
+}
