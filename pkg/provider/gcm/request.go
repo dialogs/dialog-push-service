@@ -41,6 +41,6 @@ func (r *Request) SetToken(token string) {
 	}
 }
 
-func (r *Request) Ignore() bool {
+func (r *Request) ShouldIgnore() bool {
 	return r == nil
 }

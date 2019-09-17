@@ -110,6 +110,6 @@ func (m *Message) SetToken(token string) {
 	}
 }
 
-func (m *Message) Ignore() bool {
+func (m *Message) ShouldIgnore() bool {
 	return m == nil
 }

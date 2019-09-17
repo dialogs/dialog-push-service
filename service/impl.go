@@ -187,7 +187,7 @@ func (i *implGRPC) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) 
 
 				pushRes := newSendPushResult(projectWorker.ProjectID())
 
-				if err == nil && !req.Payload.Ignore() {
+				if err == nil && !req.Payload.ShouldIgnore() {
 					for res := range projectWorker.Send(ctx, req) {
 
 						if res.Error != nil {

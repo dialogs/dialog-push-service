@@ -57,19 +57,19 @@ func TestIgnoreRequest(t *testing.T) {
 		{
 			res, err = RequestPbToAns(testInfo.Src, true, true, strPtr("topic-name"), strPtr("sound-name"))
 			require.NoError(t, err)
-			require.Equal(t, testInfo.ApnIgnore, res.Ignore())
+			require.Equal(t, testInfo.ApnIgnore, res.ShouldIgnore())
 		}
 
 		{
 			res, err = RequestPbToFcm(testInfo.Src, true)
 			require.NoError(t, err)
-			require.Equal(t, testInfo.FcmIgnore, res.Ignore())
+			require.Equal(t, testInfo.FcmIgnore, res.ShouldIgnore())
 		}
 
 		{
 			res, err = RequestPbToGcm(testInfo.Src, true)
 			require.NoError(t, err)
-			require.Equal(t, testInfo.GcmIgnore, res.Ignore())
+			require.Equal(t, testInfo.GcmIgnore, res.ShouldIgnore())
 		}
 	}
 
