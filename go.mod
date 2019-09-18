@@ -1,6 +1,9 @@
 module github.com/dialogs/dialog-push-service
 
-go 1.12
+go 1.13
+
+// fix hash error
+replace software.sslmate.com/src/go-pkcs12 => software.sslmate.com/src/go-pkcs12 v0.0.0-20190209200317-47dd539968c4
 
 require (
 	github.com/dialogs/dialog-go-lib v1.1.12
@@ -15,5 +18,5 @@ require (
 	go.uber.org/zap v1.10.0
 	golang.org/x/net v0.0.0-20190613194153-d28f0bde5980
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	google.golang.org/grpc v1.23.0
+	google.golang.org/grpc v1.23.1
 )

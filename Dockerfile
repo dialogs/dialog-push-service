@@ -1,4 +1,4 @@
-FROM golang:1.12 as builder
+FROM golang:1.13 as builder
 
 ARG COMMIT=
 ARG RELEASE=
@@ -12,8 +12,7 @@ ADD main.go main.go
 ADD go.mod go.mod
 ADD go.sum go.sum
 
-RUN GO111MODULE=on \
-    CGO_ENABLED=1 \
+RUN CGO_ENABLED=1 \
     GOOS=linux \
     GOARCH=amd64 \
     go build \
@@ -22,6 +21,7 @@ RUN GO111MODULE=on \
     -X ${PROJECT}/pkg/info.Version=${RELEASE} \
     -X ${PROJECT}/pkg/info.GoVersion=$(go version| sed -e 's/ /_/g') \
     -X ${PROJECT}/pkg/info.BuildDate=$(date -u '+%Y-%m-%d_%H:%M:%S')" \
+    -race -v \
     -o /push-server main.go
 
 FROM debian:stretch-slim
