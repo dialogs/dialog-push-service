@@ -142,10 +142,6 @@ func setNotificationPropsFcm(req *fcm.Message, src *api.AlertingPush) {
 	req.Notification.Body = src.GetSimpleAlertBody()
 	// src.GetBadge() is not supported
 
-	if mid := src.GetMid(); mid != nil {
-		req.Data["mid"] = mid.Value
-	}
-
 	if category := src.GetCategory(); category != nil {
 		req.Data["category"] = category.Value
 	}

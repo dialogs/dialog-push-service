@@ -112,9 +112,6 @@ func setAlertingPayloadAns(payload *payload.Payload, src *api.AlertingPush, soun
 		setAlertPropsAns(payload, src, sound)
 		payload.MutableContent()
 
-		if mid := src.Mid; mid != nil {
-			payload.Custom("mid", mid.Value)
-		}
 
 		if category := src.Category; category != nil {
 			payload.Custom("category", category.Value)

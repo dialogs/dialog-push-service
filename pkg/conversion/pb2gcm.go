@@ -124,9 +124,6 @@ func serAlertingPushGcm(req *gcm.Request, data map[string]interface{}, src *api.
 		return err
 	}
 
-	if mid := src.Mid; mid != nil {
-		data["mid"] = mid.Value
-	}
 
 	if category := src.Category; category != nil {
 		data["category"] = category.Value
