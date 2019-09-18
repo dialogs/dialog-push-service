@@ -40,3 +40,7 @@ func (r *Request) SetToken(token string) {
 		r.To = token
 	}
 }
+
+func (r *Request) ShouldIgnore() bool {
+	return r == nil
+}

@@ -109,3 +109,7 @@ func (m *Message) SetToken(token string) {
 		m.Token = token
 	}
 }
+
+func (m *Message) ShouldIgnore() bool {
+	return m == nil
+}
