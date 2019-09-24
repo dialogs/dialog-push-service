@@ -6,7 +6,7 @@ go 1.13
 replace software.sslmate.com/src/go-pkcs12 => software.sslmate.com/src/go-pkcs12 v0.0.0-20190209200317-47dd539968c4
 
 require (
-	github.com/dialogs/dialog-go-lib v1.1.12
+	github.com/dialogs/dialog-go-lib v1.1.13
 	github.com/gogo/protobuf v1.2.1
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e
