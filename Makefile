@@ -35,7 +35,7 @@ lint:
 	docker run -it --rm \
 	-v "$(shell pwd):/go/src/${PROJECT}" \
 	-w "/go/src/${PROJECT}" \
-	go-tools-linter:1.0.0 \
+	go-tools-linter:latest \
 	golangci-lint run ./... --exclude "is deprecated"
 
 .PHONY: gencode
@@ -43,7 +43,7 @@ gencode:
 	docker run -it --rm \
 	-v "$(shell pwd):/go/src/${PROJECT}" \
 	-w "/go/src/${PROJECT}/" \
-	go-tools-easyjson:1.0.0 \
+	go-tools-easyjson:latest \
 	sh -c 'rm -fv pkg/provider/*/*_easyjson.go && \
 	easyjson -all pkg/provider/fcm/request.go && \
 	easyjson -all pkg/provider/fcm/response.go && \
@@ -61,7 +61,7 @@ proto-golang:
 	docker run -it --rm \
 	-v "$(shell pwd):/go/src/${PROJECT}" \
 	-w "/go/src/${PROJECT}" \
-	go-tools-protoc:1.0.0 \
+	go-tools-protoc:latest \
 	protoc \
 	-I=${PROTO_SRC} \
 	-I=vendor/${SCALA_PB}/protobuf \

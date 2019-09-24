@@ -3,13 +3,13 @@ module github.com/dialogs/dialog-push-service
 go 1.13
 
 // fix hash error
-replace software.sslmate.com/src/go-pkcs12 => software.sslmate.com/src/go-pkcs12 v0.0.0-20190209200317-47dd539968c4
+replace software.sslmate.com/src/go-pkcs12 => software.sslmate.com/src/go-pkcs12 v0.0.0-20190322163127-6e380ad96778
 
 require (
-	github.com/dialogs/dialog-go-lib v1.1.12
-	github.com/gogo/protobuf v1.2.1
+	github.com/dialogs/dialog-go-lib v1.1.14
+	github.com/gogo/protobuf v1.3.0
 	github.com/jessevdk/go-flags v1.4.0
-	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e
+	github.com/mailru/easyjson v0.7.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.1.0
 	github.com/sideshow/apns2 v0.0.0-20171218084920-df275e5c35d2
