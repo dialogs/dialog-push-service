@@ -101,7 +101,7 @@ func setVoIPPayloadFcm(req *fcm.Message, src *api.VoipPush) error {
 func setEncryptedPushFcm(req *fcm.Message, src *api.EncryptedPush) error {
 
 	if alerting := src.GetPublicAlertingPush(); alerting != nil {
-		setNotificationPropsFcm(req, alerting)
+		setCategoryPropsFcm(req, alerting)
 	}
 
 	encryptedData := src.GetEncryptedData()
@@ -128,6 +128,7 @@ func setAlertingPushFcm(req *fcm.Message, src *api.AlertingPush, allowAlerts boo
 	}
 
 	setNotificationPropsFcm(req, src)
+	setCategoryPropsFcm(req, src)
 
 	return nil
 }
@@ -141,6 +142,9 @@ func setNotificationPropsFcm(req *fcm.Message, src *api.AlertingPush) {
 	req.Notification.Title = src.GetSimpleAlertTitle()
 	req.Notification.Body = src.GetSimpleAlertBody()
 	// src.GetBadge() is not supported
+}
+
+func setCategoryPropsFcm(req *fcm.Message, src *api.AlertingPush) {
 
 	if category := src.GetCategory(); category != nil {
 		req.Data["category"] = category.Value
