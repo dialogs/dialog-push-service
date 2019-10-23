@@ -114,9 +114,7 @@ func easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderAns1(in *
 		case "status_code":
 			out.StatusCode = int(in.Int())
 		case "body":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Body).UnmarshalJSON(data))
-			}
+			(out.Body).UnmarshalEasyJSON(in)
 		default:
 			in.SkipRecursive()
 		}
@@ -144,7 +142,7 @@ func easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderAns1(out 
 	{
 		const prefix string = ",\"body\":"
 		out.RawString(prefix)
-		out.Raw((in.Body).MarshalJSON())
+		(in.Body).MarshalEasyJSON(out)
 	}
 	out.RawByte('}')
 }

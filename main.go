@@ -4,10 +4,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/dialogs/dialog-go-lib/logger"
 	"github.com/dialogs/dialog-push-service/service"
 	"github.com/jessevdk/go-flags"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 var opts struct {
@@ -20,8 +20,7 @@ func main() {
 		log.Fatal("failed to parse arguments:", err)
 	}
 
-	logCfg := zap.NewProductionConfig()
-	logger, err := logCfg.Build()
+	logger, err := logger.New()
 	if err != nil {
 		log.Fatal("failed to create logger:", err)
 	}

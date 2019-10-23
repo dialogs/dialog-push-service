@@ -135,9 +135,7 @@ func easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderFcm1(in *
 				if out.Error == nil {
 					out.Error = new(SendError)
 				}
-				if data := in.Raw(); in.Ok() {
-					in.AddError((*out.Error).UnmarshalJSON(data))
-				}
+				(*out.Error).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()
@@ -167,7 +165,7 @@ func easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderFcm1(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((*in.Error).MarshalJSON())
+		(*in.Error).MarshalEasyJSON(out)
 	}
 	out.RawByte('}')
 }

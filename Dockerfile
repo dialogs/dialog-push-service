@@ -26,14 +26,12 @@ RUN CGO_ENABLED=1 \
 
 FROM debian:stretch-slim
 
-WORKDIR /
+COPY --from=builder /push-server /usr/local/bin/push-server
 
-COPY --from=builder /push-server /push-server
-
-RUN apt update -y
-RUN apt install -y ca-certificates
-RUN update-ca-certificates
+RUN apt update -y && \
+    apt install -y ca-certificates && \
+    update-ca-certificates
 
 USER 1000
 
-CMD ["/push-server"]
+CMD ["push-server"]
