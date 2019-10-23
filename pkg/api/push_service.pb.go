@@ -11,8 +11,11 @@ import (
 	github_com_gogo_protobuf_sortkeys "github.com/gogo/protobuf/sortkeys"
 	types "github.com/gogo/protobuf/types"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 	reflect "reflect"
 	strconv "strconv"
 	strings "strings"
@@ -27,7 +30,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type PeerType int32
 
@@ -69,7 +72,7 @@ func (m *SilentPush) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_SilentPush.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +109,7 @@ func (m *Localizeable) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return xxx_messageInfo_Localizeable.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -158,7 +161,7 @@ func (m *Peer) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_Peer.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -218,7 +221,7 @@ func (m *OutPeer) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_OutPeer.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -293,7 +296,7 @@ func (m *AlertingPush) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return xxx_messageInfo_AlertingPush.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -413,120 +416,14 @@ func (m *AlertingPush) GetCategory() *types.StringValue {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*AlertingPush) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _AlertingPush_OneofMarshaler, _AlertingPush_OneofUnmarshaler, _AlertingPush_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*AlertingPush) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*AlertingPush_LocAlertBody)(nil),
 		(*AlertingPush_SimpleAlertBody)(nil),
 		(*AlertingPush_LocAlertTitle)(nil),
 		(*AlertingPush_SimpleAlertTitle)(nil),
 	}
-}
-
-func _AlertingPush_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*AlertingPush)
-	// alert_body
-	switch x := m.AlertBody.(type) {
-	case *AlertingPush_LocAlertBody:
-		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.LocAlertBody); err != nil {
-			return err
-		}
-	case *AlertingPush_SimpleAlertBody:
-		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
-		_ = b.EncodeStringBytes(x.SimpleAlertBody)
-	case nil:
-	default:
-		return fmt.Errorf("AlertingPush.AlertBody has unexpected type %T", x)
-	}
-	// alert_title
-	switch x := m.AlertTitle.(type) {
-	case *AlertingPush_LocAlertTitle:
-		_ = b.EncodeVarint(3<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.LocAlertTitle); err != nil {
-			return err
-		}
-	case *AlertingPush_SimpleAlertTitle:
-		_ = b.EncodeVarint(4<<3 | proto.WireBytes)
-		_ = b.EncodeStringBytes(x.SimpleAlertTitle)
-	case nil:
-	default:
-		return fmt.Errorf("AlertingPush.AlertTitle has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _AlertingPush_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*AlertingPush)
-	switch tag {
-	case 1: // alert_body.loc_alert_body
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Localizeable)
-		err := b.DecodeMessage(msg)
-		m.AlertBody = &AlertingPush_LocAlertBody{msg}
-		return true, err
-	case 2: // alert_body.simple_alert_body
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeStringBytes()
-		m.AlertBody = &AlertingPush_SimpleAlertBody{x}
-		return true, err
-	case 3: // alert_title.loc_alert_title
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Localizeable)
-		err := b.DecodeMessage(msg)
-		m.AlertTitle = &AlertingPush_LocAlertTitle{msg}
-		return true, err
-	case 4: // alert_title.simple_alert_title
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeStringBytes()
-		m.AlertTitle = &AlertingPush_SimpleAlertTitle{x}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _AlertingPush_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*AlertingPush)
-	// alert_body
-	switch x := m.AlertBody.(type) {
-	case *AlertingPush_LocAlertBody:
-		s := proto.Size(x.LocAlertBody)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *AlertingPush_SimpleAlertBody:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.SimpleAlertBody)))
-		n += len(x.SimpleAlertBody)
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	// alert_title
-	switch x := m.AlertTitle.(type) {
-	case *AlertingPush_LocAlertTitle:
-		s := proto.Size(x.LocAlertTitle)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *AlertingPush_SimpleAlertTitle:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.SimpleAlertTitle)))
-		n += len(x.SimpleAlertTitle)
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
 }
 
 type VoipPush struct {
@@ -554,7 +451,7 @@ func (m *VoipPush) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_VoipPush.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -655,7 +552,7 @@ func (m *EncryptedPush) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_EncryptedPush.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -720,7 +617,7 @@ func (m *PushBody) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_PushBody.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -820,116 +717,14 @@ func (m *PushBody) GetEncryptedPush() *EncryptedPush {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*PushBody) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _PushBody_OneofMarshaler, _PushBody_OneofUnmarshaler, _PushBody_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*PushBody) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*PushBody_SilentPush)(nil),
 		(*PushBody_AlertingPush)(nil),
 		(*PushBody_VoipPush)(nil),
 		(*PushBody_EncryptedPush)(nil),
 	}
-}
-
-func _PushBody_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*PushBody)
-	// body
-	switch x := m.Body.(type) {
-	case *PushBody_SilentPush:
-		_ = b.EncodeVarint(4<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.SilentPush); err != nil {
-			return err
-		}
-	case *PushBody_AlertingPush:
-		_ = b.EncodeVarint(5<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.AlertingPush); err != nil {
-			return err
-		}
-	case *PushBody_VoipPush:
-		_ = b.EncodeVarint(6<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.VoipPush); err != nil {
-			return err
-		}
-	case *PushBody_EncryptedPush:
-		_ = b.EncodeVarint(7<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.EncryptedPush); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("PushBody.Body has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _PushBody_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*PushBody)
-	switch tag {
-	case 4: // body.silent_push
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(SilentPush)
-		err := b.DecodeMessage(msg)
-		m.Body = &PushBody_SilentPush{msg}
-		return true, err
-	case 5: // body.alerting_push
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(AlertingPush)
-		err := b.DecodeMessage(msg)
-		m.Body = &PushBody_AlertingPush{msg}
-		return true, err
-	case 6: // body.voip_push
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(VoipPush)
-		err := b.DecodeMessage(msg)
-		m.Body = &PushBody_VoipPush{msg}
-		return true, err
-	case 7: // body.encrypted_push
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(EncryptedPush)
-		err := b.DecodeMessage(msg)
-		m.Body = &PushBody_EncryptedPush{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _PushBody_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*PushBody)
-	// body
-	switch x := m.Body.(type) {
-	case *PushBody_SilentPush:
-		s := proto.Size(x.SilentPush)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *PushBody_AlertingPush:
-		s := proto.Size(x.AlertingPush)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *PushBody_VoipPush:
-		s := proto.Size(x.VoipPush)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *PushBody_EncryptedPush:
-		s := proto.Size(x.EncryptedPush)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
 }
 
 type DeviceIdList struct {
@@ -949,7 +744,7 @@ func (m *DeviceIdList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return xxx_messageInfo_DeviceIdList.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -994,7 +789,7 @@ func (m *Push) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_Push.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1051,7 +846,7 @@ func (m *Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_Response.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1093,7 +888,7 @@ func (m *PingRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return xxx_messageInfo_PingRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1128,7 +923,7 @@ func (m *PongResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return xxx_messageInfo_PongResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2215,6 +2010,20 @@ type PushingServer interface {
 	SinglePush(context.Context, *Push) (*Response, error)
 }
 
+// UnimplementedPushingServer can be embedded to have forward compatible implementations.
+type UnimplementedPushingServer struct {
+}
+
+func (*UnimplementedPushingServer) Ping(ctx context.Context, req *PingRequest) (*PongResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
+}
+func (*UnimplementedPushingServer) PushStream(srv Pushing_PushStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method PushStream not implemented")
+}
+func (*UnimplementedPushingServer) SinglePush(ctx context.Context, req *Push) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SinglePush not implemented")
+}
+
 func RegisterPushingServer(s *grpc.Server, srv PushingServer) {
 	s.RegisterService(&_Pushing_serviceDesc, srv)
 }
@@ -2308,7 +2117,7 @@ var _Pushing_serviceDesc = grpc.ServiceDesc{
 func (m *SilentPush) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2316,17 +2125,22 @@ func (m *SilentPush) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *SilentPush) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SilentPush) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *Localizeable) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2334,38 +2148,38 @@ func (m *Localizeable) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Localizeable) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Localizeable) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.LocKey) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(len(m.LocKey)))
-		i += copy(dAtA[i:], m.LocKey)
-	}
 	if len(m.LocArgs) > 0 {
-		for _, s := range m.LocArgs {
+		for iNdEx := len(m.LocArgs) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.LocArgs[iNdEx])
+			copy(dAtA[i:], m.LocArgs[iNdEx])
+			i = encodeVarintPushService(dAtA, i, uint64(len(m.LocArgs[iNdEx])))
+			i--
 			dAtA[i] = 0x12
-			i++
-			l = len(s)
-			for l >= 1<<7 {
-				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
-				l >>= 7
-				i++
-			}
-			dAtA[i] = uint8(l)
-			i++
-			i += copy(dAtA[i:], s)
 		}
 	}
-	return i, nil
+	if len(m.LocKey) > 0 {
+		i -= len(m.LocKey)
+		copy(dAtA[i:], m.LocKey)
+		i = encodeVarintPushService(dAtA, i, uint64(len(m.LocKey)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *Peer) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2373,33 +2187,39 @@ func (m *Peer) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Peer) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Peer) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Type != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.Type))
+	if len(m.StrId) > 0 {
+		i -= len(m.StrId)
+		copy(dAtA[i:], m.StrId)
+		i = encodeVarintPushService(dAtA, i, uint64(len(m.StrId)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if m.Id != 0 {
-		dAtA[i] = 0x10
-		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.Id))
+		i--
+		dAtA[i] = 0x10
 	}
-	if len(m.StrId) > 0 {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(len(m.StrId)))
-		i += copy(dAtA[i:], m.StrId)
+	if m.Type != 0 {
+		i = encodeVarintPushService(dAtA, i, uint64(m.Type))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *OutPeer) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2407,38 +2227,44 @@ func (m *OutPeer) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *OutPeer) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *OutPeer) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Type != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.Type))
-	}
-	if m.Id != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.Id))
+	if len(m.StrId) > 0 {
+		i -= len(m.StrId)
+		copy(dAtA[i:], m.StrId)
+		i = encodeVarintPushService(dAtA, i, uint64(len(m.StrId)))
+		i--
+		dAtA[i] = 0x22
 	}
 	if m.AccessHash != 0 {
-		dAtA[i] = 0x18
-		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.AccessHash))
+		i--
+		dAtA[i] = 0x18
 	}
-	if len(m.StrId) > 0 {
-		dAtA[i] = 0x22
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(len(m.StrId)))
-		i += copy(dAtA[i:], m.StrId)
+	if m.Id != 0 {
+		i = encodeVarintPushService(dAtA, i, uint64(m.Id))
+		i--
+		dAtA[i] = 0x10
 	}
-	return i, nil
+	if m.Type != 0 {
+		i = encodeVarintPushService(dAtA, i, uint64(m.Type))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *AlertingPush) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2446,110 +2272,147 @@ func (m *AlertingPush) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AlertingPush) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AlertingPush) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.AlertBody != nil {
-		nn1, err := m.AlertBody.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+	if m.Category != nil {
+		{
+			size, err := m.Category.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
 		}
-		i += nn1
-	}
-	if m.AlertTitle != nil {
-		nn2, err := m.AlertTitle.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += nn2
-	}
-	if m.Badge != 0 {
-		dAtA[i] = 0x30
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.Badge))
-	}
-	if m.Peer != nil {
-		dAtA[i] = 0x3a
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.Peer.Size()))
-		n3, err := m.Peer.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n3
+		i--
+		dAtA[i] = 0x4a
 	}
 	if m.Mid != nil {
+		{
+			size, err := m.Mid.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
+		}
+		i--
 		dAtA[i] = 0x42
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.Mid.Size()))
-		n4, err := m.Mid.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n4
 	}
-	if m.Category != nil {
-		dAtA[i] = 0x4a
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.Category.Size()))
-		n5, err := m.Category.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+	if m.Peer != nil {
+		{
+			size, err := m.Peer.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
 		}
-		i += n5
+		i--
+		dAtA[i] = 0x3a
 	}
-	return i, nil
+	if m.Badge != 0 {
+		i = encodeVarintPushService(dAtA, i, uint64(m.Badge))
+		i--
+		dAtA[i] = 0x30
+	}
+	if m.AlertTitle != nil {
+		{
+			size := m.AlertTitle.Size()
+			i -= size
+			if _, err := m.AlertTitle.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	if m.AlertBody != nil {
+		{
+			size := m.AlertBody.Size()
+			i -= size
+			if _, err := m.AlertBody.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *AlertingPush_LocAlertBody) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
+	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+}
+
+func (m *AlertingPush_LocAlertBody) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.LocAlertBody != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.LocAlertBody.Size()))
-		n6, err := m.LocAlertBody.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.LocAlertBody.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
 		}
-		i += n6
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 func (m *AlertingPush_SimpleAlertBody) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	dAtA[i] = 0x12
-	i++
+	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+}
+
+func (m *AlertingPush_SimpleAlertBody) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	i -= len(m.SimpleAlertBody)
+	copy(dAtA[i:], m.SimpleAlertBody)
 	i = encodeVarintPushService(dAtA, i, uint64(len(m.SimpleAlertBody)))
-	i += copy(dAtA[i:], m.SimpleAlertBody)
-	return i, nil
+	i--
+	dAtA[i] = 0x12
+	return len(dAtA) - i, nil
 }
 func (m *AlertingPush_LocAlertTitle) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
+	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+}
+
+func (m *AlertingPush_LocAlertTitle) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.LocAlertTitle != nil {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.LocAlertTitle.Size()))
-		n7, err := m.LocAlertTitle.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.LocAlertTitle.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
 		}
-		i += n7
+		i--
+		dAtA[i] = 0x1a
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 func (m *AlertingPush_SimpleAlertTitle) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	dAtA[i] = 0x22
-	i++
+	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+}
+
+func (m *AlertingPush_SimpleAlertTitle) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	i -= len(m.SimpleAlertTitle)
+	copy(dAtA[i:], m.SimpleAlertTitle)
 	i = encodeVarintPushService(dAtA, i, uint64(len(m.SimpleAlertTitle)))
-	i += copy(dAtA[i:], m.SimpleAlertTitle)
-	return i, nil
+	i--
+	dAtA[i] = 0x22
+	return len(dAtA) - i, nil
 }
 func (m *VoipPush) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2557,81 +2420,94 @@ func (m *VoipPush) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *VoipPush) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VoipPush) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.CallId != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.CallId))
-	}
-	if m.AttemptIndex != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.AttemptIndex))
-	}
-	if len(m.DisplayName) > 0 {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(len(m.DisplayName)))
-		i += copy(dAtA[i:], m.DisplayName)
-	}
-	if len(m.EventBusId) > 0 {
-		dAtA[i] = 0x22
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(len(m.EventBusId)))
-		i += copy(dAtA[i:], m.EventBusId)
-	}
-	if m.Peer != nil {
-		dAtA[i] = 0x2a
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.Peer.Size()))
-		n8, err := m.Peer.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n8
-	}
-	if len(m.UpdateType) > 0 {
-		dAtA[i] = 0x32
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(len(m.UpdateType)))
-		i += copy(dAtA[i:], m.UpdateType)
-	}
-	if len(m.DisposalReason) > 0 {
-		dAtA[i] = 0x3a
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(len(m.DisposalReason)))
-		i += copy(dAtA[i:], m.DisposalReason)
-	}
-	if m.OutPeer != nil {
-		dAtA[i] = 0x42
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.OutPeer.Size()))
-		n9, err := m.OutPeer.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n9
-	}
 	if m.Video {
-		dAtA[i] = 0x48
-		i++
+		i--
 		if m.Video {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i++
+		i--
+		dAtA[i] = 0x48
 	}
-	return i, nil
+	if m.OutPeer != nil {
+		{
+			size, err := m.OutPeer.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.DisposalReason) > 0 {
+		i -= len(m.DisposalReason)
+		copy(dAtA[i:], m.DisposalReason)
+		i = encodeVarintPushService(dAtA, i, uint64(len(m.DisposalReason)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.UpdateType) > 0 {
+		i -= len(m.UpdateType)
+		copy(dAtA[i:], m.UpdateType)
+		i = encodeVarintPushService(dAtA, i, uint64(len(m.UpdateType)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if m.Peer != nil {
+		{
+			size, err := m.Peer.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.EventBusId) > 0 {
+		i -= len(m.EventBusId)
+		copy(dAtA[i:], m.EventBusId)
+		i = encodeVarintPushService(dAtA, i, uint64(len(m.EventBusId)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.DisplayName) > 0 {
+		i -= len(m.DisplayName)
+		copy(dAtA[i:], m.DisplayName)
+		i = encodeVarintPushService(dAtA, i, uint64(len(m.DisplayName)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.AttemptIndex != 0 {
+		i = encodeVarintPushService(dAtA, i, uint64(m.AttemptIndex))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.CallId != 0 {
+		i = encodeVarintPushService(dAtA, i, uint64(m.CallId))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *EncryptedPush) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2639,38 +2515,46 @@ func (m *EncryptedPush) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *EncryptedPush) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *EncryptedPush) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.PublicAlertingPush != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.PublicAlertingPush.Size()))
-		n10, err := m.PublicAlertingPush.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n10
+	if m.Nonce != 0 {
+		i = encodeVarintPushService(dAtA, i, uint64(m.Nonce))
+		i--
+		dAtA[i] = 0x18
 	}
 	if len(m.EncryptedData) > 0 {
-		dAtA[i] = 0x12
-		i++
+		i -= len(m.EncryptedData)
+		copy(dAtA[i:], m.EncryptedData)
 		i = encodeVarintPushService(dAtA, i, uint64(len(m.EncryptedData)))
-		i += copy(dAtA[i:], m.EncryptedData)
+		i--
+		dAtA[i] = 0x12
 	}
-	if m.Nonce != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.Nonce))
+	if m.PublicAlertingPush != nil {
+		{
+			size, err := m.PublicAlertingPush.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *PushBody) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2678,96 +2562,128 @@ func (m *PushBody) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *PushBody) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PushBody) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.CollapseKey) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(len(m.CollapseKey)))
-		i += copy(dAtA[i:], m.CollapseKey)
-	}
-	if m.TimeToLive != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.TimeToLive))
+	if m.Body != nil {
+		{
+			size := m.Body.Size()
+			i -= size
+			if _, err := m.Body.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
 	}
 	if m.Seq != 0 {
-		dAtA[i] = 0x18
-		i++
 		i = encodeVarintPushService(dAtA, i, uint64(m.Seq))
+		i--
+		dAtA[i] = 0x18
 	}
-	if m.Body != nil {
-		nn11, err := m.Body.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += nn11
+	if m.TimeToLive != 0 {
+		i = encodeVarintPushService(dAtA, i, uint64(m.TimeToLive))
+		i--
+		dAtA[i] = 0x10
 	}
-	return i, nil
+	if len(m.CollapseKey) > 0 {
+		i -= len(m.CollapseKey)
+		copy(dAtA[i:], m.CollapseKey)
+		i = encodeVarintPushService(dAtA, i, uint64(len(m.CollapseKey)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *PushBody_SilentPush) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
+	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+}
+
+func (m *PushBody_SilentPush) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.SilentPush != nil {
-		dAtA[i] = 0x22
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.SilentPush.Size()))
-		n12, err := m.SilentPush.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.SilentPush.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
 		}
-		i += n12
+		i--
+		dAtA[i] = 0x22
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 func (m *PushBody_AlertingPush) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
+	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+}
+
+func (m *PushBody_AlertingPush) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.AlertingPush != nil {
-		dAtA[i] = 0x2a
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.AlertingPush.Size()))
-		n13, err := m.AlertingPush.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.AlertingPush.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
 		}
-		i += n13
+		i--
+		dAtA[i] = 0x2a
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 func (m *PushBody_VoipPush) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
+	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+}
+
+func (m *PushBody_VoipPush) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.VoipPush != nil {
-		dAtA[i] = 0x32
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.VoipPush.Size()))
-		n14, err := m.VoipPush.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.VoipPush.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
 		}
-		i += n14
+		i--
+		dAtA[i] = 0x32
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 func (m *PushBody_EncryptedPush) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
+	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+}
+
+func (m *PushBody_EncryptedPush) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	if m.EncryptedPush != nil {
-		dAtA[i] = 0x3a
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.EncryptedPush.Size()))
-		n15, err := m.EncryptedPush.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.EncryptedPush.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
 		}
-		i += n15
+		i--
+		dAtA[i] = 0x3a
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 func (m *DeviceIdList) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2775,32 +2691,31 @@ func (m *DeviceIdList) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *DeviceIdList) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeviceIdList) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
 	if len(m.DeviceIds) > 0 {
-		for _, s := range m.DeviceIds {
+		for iNdEx := len(m.DeviceIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.DeviceIds[iNdEx])
+			copy(dAtA[i:], m.DeviceIds[iNdEx])
+			i = encodeVarintPushService(dAtA, i, uint64(len(m.DeviceIds[iNdEx])))
+			i--
 			dAtA[i] = 0xa
-			i++
-			l = len(s)
-			for l >= 1<<7 {
-				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
-				l >>= 7
-				i++
-			}
-			dAtA[i] = uint8(l)
-			i++
-			i += copy(dAtA[i:], s)
 		}
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *Push) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2808,61 +2723,67 @@ func (m *Push) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Push) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Push) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.Destinations) > 0 {
-		for k, _ := range m.Destinations {
-			dAtA[i] = 0xa
-			i++
-			v := m.Destinations[k]
-			msgSize := 0
-			if v != nil {
-				msgSize = v.Size()
-				msgSize += 1 + sovPushService(uint64(msgSize))
-			}
-			mapSize := 1 + len(k) + sovPushService(uint64(len(k))) + msgSize
-			i = encodeVarintPushService(dAtA, i, uint64(mapSize))
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintPushService(dAtA, i, uint64(len(k)))
-			i += copy(dAtA[i:], k)
-			if v != nil {
-				dAtA[i] = 0x12
-				i++
-				i = encodeVarintPushService(dAtA, i, uint64(v.Size()))
-				n16, err := v.MarshalTo(dAtA[i:])
-				if err != nil {
-					return 0, err
-				}
-				i += n16
-			}
-		}
+	if len(m.CorrelationId) > 0 {
+		i -= len(m.CorrelationId)
+		copy(dAtA[i:], m.CorrelationId)
+		i = encodeVarintPushService(dAtA, i, uint64(len(m.CorrelationId)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if m.Body != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(m.Body.Size()))
-		n17, err := m.Body.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.Body.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintPushService(dAtA, i, uint64(size))
 		}
-		i += n17
+		i--
+		dAtA[i] = 0x12
 	}
-	if len(m.CorrelationId) > 0 {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintPushService(dAtA, i, uint64(len(m.CorrelationId)))
-		i += copy(dAtA[i:], m.CorrelationId)
+	if len(m.Destinations) > 0 {
+		for k := range m.Destinations {
+			v := m.Destinations[k]
+			baseI := i
+			if v != nil {
+				{
+					size, err := v.MarshalToSizedBuffer(dAtA[:i])
+					if err != nil {
+						return 0, err
+					}
+					i -= size
+					i = encodeVarintPushService(dAtA, i, uint64(size))
+				}
+				i--
+				dAtA[i] = 0x12
+			}
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintPushService(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintPushService(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *Response) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2870,45 +2791,48 @@ func (m *Response) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Response) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Response) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
 	if len(m.ProjectInvalidations) > 0 {
-		for k, _ := range m.ProjectInvalidations {
-			dAtA[i] = 0xa
-			i++
+		for k := range m.ProjectInvalidations {
 			v := m.ProjectInvalidations[k]
-			msgSize := 0
+			baseI := i
 			if v != nil {
-				msgSize = v.Size()
-				msgSize += 1 + sovPushService(uint64(msgSize))
-			}
-			mapSize := 1 + len(k) + sovPushService(uint64(len(k))) + msgSize
-			i = encodeVarintPushService(dAtA, i, uint64(mapSize))
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintPushService(dAtA, i, uint64(len(k)))
-			i += copy(dAtA[i:], k)
-			if v != nil {
-				dAtA[i] = 0x12
-				i++
-				i = encodeVarintPushService(dAtA, i, uint64(v.Size()))
-				n18, err := v.MarshalTo(dAtA[i:])
-				if err != nil {
-					return 0, err
+				{
+					size, err := v.MarshalToSizedBuffer(dAtA[:i])
+					if err != nil {
+						return 0, err
+					}
+					i -= size
+					i = encodeVarintPushService(dAtA, i, uint64(size))
 				}
-				i += n18
+				i--
+				dAtA[i] = 0x12
 			}
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintPushService(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintPushService(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0xa
 		}
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *PingRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2916,17 +2840,22 @@ func (m *PingRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *PingRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PingRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *PongResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2934,21 +2863,28 @@ func (m *PongResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *PongResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PongResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintPushService(dAtA []byte, offset int, v uint64) int {
+	offset -= sovPushService(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *SilentPush) Size() (n int) {
 	if m == nil {
@@ -3311,14 +3247,7 @@ func (m *PongResponse) Size() (n int) {
 }
 
 func sovPushService(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozPushService(x uint64) (n int) {
 	return sovPushService(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -3376,7 +3305,7 @@ func (this *AlertingPush) String() string {
 		`AlertBody:` + fmt.Sprintf("%v", this.AlertBody) + `,`,
 		`AlertTitle:` + fmt.Sprintf("%v", this.AlertTitle) + `,`,
 		`Badge:` + fmt.Sprintf("%v", this.Badge) + `,`,
-		`Peer:` + strings.Replace(fmt.Sprintf("%v", this.Peer), "Peer", "Peer", 1) + `,`,
+		`Peer:` + strings.Replace(this.Peer.String(), "Peer", "Peer", 1) + `,`,
 		`Mid:` + strings.Replace(fmt.Sprintf("%v", this.Mid), "StringValue", "types.StringValue", 1) + `,`,
 		`Category:` + strings.Replace(fmt.Sprintf("%v", this.Category), "StringValue", "types.StringValue", 1) + `,`,
 		`}`,
@@ -3432,10 +3361,10 @@ func (this *VoipPush) String() string {
 		`AttemptIndex:` + fmt.Sprintf("%v", this.AttemptIndex) + `,`,
 		`DisplayName:` + fmt.Sprintf("%v", this.DisplayName) + `,`,
 		`EventBusId:` + fmt.Sprintf("%v", this.EventBusId) + `,`,
-		`Peer:` + strings.Replace(fmt.Sprintf("%v", this.Peer), "Peer", "Peer", 1) + `,`,
+		`Peer:` + strings.Replace(this.Peer.String(), "Peer", "Peer", 1) + `,`,
 		`UpdateType:` + fmt.Sprintf("%v", this.UpdateType) + `,`,
 		`DisposalReason:` + fmt.Sprintf("%v", this.DisposalReason) + `,`,
-		`OutPeer:` + strings.Replace(fmt.Sprintf("%v", this.OutPeer), "OutPeer", "OutPeer", 1) + `,`,
+		`OutPeer:` + strings.Replace(this.OutPeer.String(), "OutPeer", "OutPeer", 1) + `,`,
 		`Video:` + fmt.Sprintf("%v", this.Video) + `,`,
 		`}`,
 	}, "")
@@ -3446,7 +3375,7 @@ func (this *EncryptedPush) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&EncryptedPush{`,
-		`PublicAlertingPush:` + strings.Replace(fmt.Sprintf("%v", this.PublicAlertingPush), "AlertingPush", "AlertingPush", 1) + `,`,
+		`PublicAlertingPush:` + strings.Replace(this.PublicAlertingPush.String(), "AlertingPush", "AlertingPush", 1) + `,`,
 		`EncryptedData:` + fmt.Sprintf("%v", this.EncryptedData) + `,`,
 		`Nonce:` + fmt.Sprintf("%v", this.Nonce) + `,`,
 		`}`,
@@ -3532,7 +3461,7 @@ func (this *Push) String() string {
 	mapStringForDestinations += "}"
 	s := strings.Join([]string{`&Push{`,
 		`Destinations:` + mapStringForDestinations + `,`,
-		`Body:` + strings.Replace(fmt.Sprintf("%v", this.Body), "PushBody", "PushBody", 1) + `,`,
+		`Body:` + strings.Replace(this.Body.String(), "PushBody", "PushBody", 1) + `,`,
 		`CorrelationId:` + fmt.Sprintf("%v", this.CorrelationId) + `,`,
 		`}`,
 	}, "")

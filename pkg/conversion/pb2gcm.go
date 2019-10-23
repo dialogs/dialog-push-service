@@ -26,7 +26,10 @@ func RequestPbToGcm(in *api.PushBody, allowAlerts bool) (*gcm.Request, error) {
 		err = setEncryptedPushGcm(&out, data, encrypted)
 
 	} else if alerting := in.GetAlertingPush(); alerting != nil {
-		err = serAlertingPushGcm(&out, data, alerting, allowAlerts)
+		if allowAlerts {
+			err = serAlertingPushGcm(&out, data, alerting)
+		}
+		// if allowAlerts == false, send only required properties
 
 	} else if silent := in.GetSilentPush(); silent != nil {
 		// ignoring
@@ -114,16 +117,11 @@ func setEncryptedPushGcm(req *gcm.Request, data map[string]interface{}, src *api
 	return nil
 }
 
-func serAlertingPushGcm(req *gcm.Request, data map[string]interface{}, src *api.AlertingPush, allowAlerts bool) error {
-
-	if !allowAlerts {
-		return ErrNotSupportedAlertPush
-	}
+func serAlertingPushGcm(req *gcm.Request, data map[string]interface{}, src *api.AlertingPush) error {
 
 	if err := setNotificationPropsGcm(req, src); err != nil {
 		return err
 	}
-
 
 	if category := src.Category; category != nil {
 		data["category"] = category.Value

@@ -146,9 +146,7 @@ func easyjson6ff3ac1dDecodeGithubComDialogsDialogPushServicePkgProviderGcm1(in *
 						if v1 == nil {
 							v1 = new(ResponseResult)
 						}
-						if data := in.Raw(); in.Ok() {
-							in.AddError((*v1).UnmarshalJSON(data))
-						}
+						(*v1).UnmarshalEasyJSON(in)
 					}
 					out.Results = append(out.Results, v1)
 					in.WantComma()
@@ -198,7 +196,7 @@ func easyjson6ff3ac1dEncodeGithubComDialogsDialogPushServicePkgProviderGcm1(out 
 				if v3 == nil {
 					out.RawString("null")
 				} else {
-					out.Raw((*v3).MarshalJSON())
+					(*v3).MarshalEasyJSON(out)
 				}
 			}
 			out.RawByte(']')

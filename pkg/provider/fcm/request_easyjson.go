@@ -177,9 +177,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm1(in *
 				if out.FcmOptions == nil {
 					out.FcmOptions = new(WebpushFcmOptions)
 				}
-				if data := in.Raw(); in.Ok() {
-					in.AddError((*out.FcmOptions).UnmarshalJSON(data))
-				}
+				(*out.FcmOptions).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()
@@ -277,7 +275,7 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm1(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((*in.FcmOptions).MarshalJSON())
+		(*in.FcmOptions).MarshalEasyJSON(out)
 	}
 	out.RawByte('}')
 }
@@ -451,9 +449,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(in *
 				if out.Notification == nil {
 					out.Notification = new(Notification)
 				}
-				if data := in.Raw(); in.Ok() {
-					in.AddError((*out.Notification).UnmarshalJSON(data))
-				}
+				(*out.Notification).UnmarshalEasyJSON(in)
 			}
 		case "android":
 			if in.IsNull() {
@@ -463,9 +459,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(in *
 				if out.Android == nil {
 					out.Android = new(AndroidConfig)
 				}
-				if data := in.Raw(); in.Ok() {
-					in.AddError((*out.Android).UnmarshalJSON(data))
-				}
+				(*out.Android).UnmarshalEasyJSON(in)
 			}
 		case "webpush":
 			if in.IsNull() {
@@ -475,9 +469,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(in *
 				if out.Webpush == nil {
 					out.Webpush = new(WebpushConfig)
 				}
-				if data := in.Raw(); in.Ok() {
-					in.AddError((*out.Webpush).UnmarshalJSON(data))
-				}
+				(*out.Webpush).UnmarshalEasyJSON(in)
 			}
 		case "apns":
 			if in.IsNull() {
@@ -487,9 +479,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(in *
 				if out.Apns == nil {
 					out.Apns = new(ApnsConfig)
 				}
-				if data := in.Raw(); in.Ok() {
-					in.AddError((*out.Apns).UnmarshalJSON(data))
-				}
+				(*out.Apns).UnmarshalEasyJSON(in)
 			}
 		case "fcm_options":
 			if in.IsNull() {
@@ -499,9 +489,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm3(in *
 				if out.FcmOptions == nil {
 					out.FcmOptions = new(FcmOptions)
 				}
-				if data := in.Raw(); in.Ok() {
-					in.AddError((*out.FcmOptions).UnmarshalJSON(data))
-				}
+				(*out.FcmOptions).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()
@@ -585,7 +573,7 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((*in.Notification).MarshalJSON())
+		(*in.Notification).MarshalEasyJSON(out)
 	}
 	if in.Android != nil {
 		const prefix string = ",\"android\":"
@@ -595,7 +583,7 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((*in.Android).MarshalJSON())
+		(*in.Android).MarshalEasyJSON(out)
 	}
 	if in.Webpush != nil {
 		const prefix string = ",\"webpush\":"
@@ -605,7 +593,7 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((*in.Webpush).MarshalJSON())
+		(*in.Webpush).MarshalEasyJSON(out)
 	}
 	if in.Apns != nil {
 		const prefix string = ",\"apns\":"
@@ -615,7 +603,7 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((*in.Apns).MarshalJSON())
+		(*in.Apns).MarshalEasyJSON(out)
 	}
 	if in.FcmOptions != nil {
 		const prefix string = ",\"fcm_options\":"
@@ -625,7 +613,7 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm3(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((*in.FcmOptions).MarshalJSON())
+		(*in.FcmOptions).MarshalEasyJSON(out)
 	}
 	out.RawByte('}')
 }
@@ -872,9 +860,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm6(in *
 				if out.FcmOptions == nil {
 					out.FcmOptions = new(ApnsFcmOptions)
 				}
-				if data := in.Raw(); in.Ok() {
-					in.AddError((*out.FcmOptions).UnmarshalJSON(data))
-				}
+				(*out.FcmOptions).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()
@@ -948,7 +934,7 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm6(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((*in.FcmOptions).MarshalJSON())
+		(*in.FcmOptions).MarshalEasyJSON(out)
 	}
 	out.RawByte('}')
 }
@@ -1368,14 +1354,10 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderFcm9(in *
 				if out.Notification == nil {
 					out.Notification = new(AndroidNotification)
 				}
-				if data := in.Raw(); in.Ok() {
-					in.AddError((*out.Notification).UnmarshalJSON(data))
-				}
+				(*out.Notification).UnmarshalEasyJSON(in)
 			}
 		case "fcm_options":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.FcmOptions).UnmarshalJSON(data))
-			}
+			(out.FcmOptions).UnmarshalEasyJSON(in)
 		default:
 			in.SkipRecursive()
 		}
@@ -1458,7 +1440,7 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm9(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((*in.Notification).MarshalJSON())
+		(*in.Notification).MarshalEasyJSON(out)
 	}
 	if true {
 		const prefix string = ",\"fcm_options\":"
@@ -1468,7 +1450,7 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderFcm9(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((in.FcmOptions).MarshalJSON())
+		(in.FcmOptions).MarshalEasyJSON(out)
 	}
 	out.RawByte('}')
 }

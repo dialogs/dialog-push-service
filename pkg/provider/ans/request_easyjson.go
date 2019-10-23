@@ -156,9 +156,7 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderAns1(in *
 		case "token":
 			out.Token = string(in.String())
 		case "headers":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.Headers).UnmarshalJSON(data))
-			}
+			(out.Headers).UnmarshalEasyJSON(in)
 		case "payload":
 			if data := in.Raw(); in.Ok() {
 				in.AddError((out.Payload).UnmarshalJSON(data))
@@ -191,7 +189,7 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderAns1(out 
 		} else {
 			out.RawString(prefix)
 		}
-		out.Raw((in.Headers).MarshalJSON())
+		(in.Headers).MarshalEasyJSON(out)
 	}
 	if len(in.Payload) != 0 {
 		const prefix string = ",\"payload\":"

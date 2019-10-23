@@ -24,7 +24,6 @@ mod:
 	rm -rf vendor
 	GO111MODULE=on go mod tidy
 	GO111MODULE=on go mod download
-	GO111MODULE=on go mod vendor
 
 	$(eval $@_target :=vendor/${SCALA_PB})
 	rm -rf ${$@_target}
@@ -34,7 +33,9 @@ mod:
 lint:
 	docker run -it --rm \
 	-v "$(shell pwd):/go/src/${PROJECT}" \
+	-v "${GOPATH}/pkg:/go/pkg" \
 	-w "/go/src/${PROJECT}" \
+	-e "GOFLAGS=" \
 	go-tools-linter:latest \
 	golangci-lint run ./... --exclude "is deprecated"
 
@@ -42,7 +43,9 @@ lint:
 gencode:
 	docker run -it --rm \
 	-v "$(shell pwd):/go/src/${PROJECT}" \
-	-w "/go/src/${PROJECT}/" \
+	-v "${GOPATH}/pkg:/go/pkg" \
+	-w "/go/src/${PROJECT}" \
+	-e "GOFLAGS=" \
 	go-tools-easyjson:latest \
 	sh -c 'rm -fv pkg/provider/*/*_easyjson.go && \
 	easyjson -all pkg/provider/fcm/request.go && \
@@ -60,7 +63,9 @@ proto-golang:
 
 	docker run -it --rm \
 	-v "$(shell pwd):/go/src/${PROJECT}" \
+	-v "${GOPATH}/pkg:/go/pkg" \
 	-w "/go/src/${PROJECT}" \
+	-e "GOFLAGS=" \
 	go-tools-protoc:latest \
 	protoc \
 	-I=${PROTO_SRC} \
@@ -128,7 +133,7 @@ docker-run:
 	-v "${HOME}/<...>.pem:/config/production-ee.pem" \
 	-v "${HOME}/<...>.pem:/config/production-ee-voip.pem" \
 	${DOCKER_TARGET_IMAGE} \
-	sh -c "/push-server -c /var/config/example.yaml"
+	sh -c "push-server -c /var/config/example.yaml"
 
 .PHONY: scala-publish-local
 scala-publish-local:
