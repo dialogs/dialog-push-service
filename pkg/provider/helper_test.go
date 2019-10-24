@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"net/http"
@@ -74,4 +75,71 @@ func TestSendWithRetry(t *testing.T) {
 			}))
 	}
 
+}
+
+func TestDecodeJSONResponse(t *testing.T) {
+
+	{
+		// test: invalid incoming data
+		const In = "JSON_PARSING_ERROR: Unexpected character (a) at position 0."
+
+		target := make(map[string]interface{})
+		require.EqualError(t,
+			DecodeJSONResponse(bytes.NewReader([]byte(In)), &target),
+			In)
+	}
+
+	{
+		// test: success incoming data
+		const In = `{"k1":"val1","k2":"val2 \" val3"}`
+
+		target := make(map[string]interface{})
+		require.NoError(t,
+			DecodeJSONResponse(bytes.NewReader([]byte(In)), &target))
+
+		require.Equal(t,
+			map[string]interface{}{
+				"k1": "val1",
+				"k2": `val2 " val3`,
+			},
+			target)
+	}
+}
+
+func TestRemoveSecretsFromJSON(t *testing.T) {
+
+	for k, v := range map[string]string{
+		``:                                 ``,
+		`"`:                                `"`,
+		`""`:                               `""`,
+		`"k1":"`:                           `"k1":"`,
+		`"k1":""`:                          `"k1":""`,
+		`"k1":"v1 \" v2"`:                  `"k1":"*"`,
+		`{"k1":"val1","k2":"val2"}`:        `{"k1":"*","k2":"*"}`,
+		`{"k1":"val1","k2":{"k3":"val3"}}`: `{"k1":"*","k2":{"k3":"*"}}`,
+		`{"k1":"val1","k2":"val2 \" val3 \" val4"}`: `{"k1":"*","k2":"*"}`,
+	} {
+
+		require.Equal(t,
+			v,
+			string(RemoveSecretsFromJSON([]byte(k))), k)
+	}
+}
+
+func TestJSONWithoutSecrets(t *testing.T) {
+
+	{
+		out, err := JSONWithoutSecrets(nil)
+		require.NoError(t, err)
+		require.Equal(t, "null", string(out))
+	}
+
+	{
+		out, err := JSONWithoutSecrets(map[string]interface{}{
+			"k1": "val1",
+			"k2": `val2 " val3`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, `{"k1":"*","k2":"*"}`, string(out))
+	}
 }

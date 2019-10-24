@@ -1,5 +1,7 @@
 package fcm
 
+import "encoding/json"
+
 const (
 	AndroidMessagePriorityNormal AndroidMessagePriority = "NORMAL"
 	AndroidMessagePriorityHigh   AndroidMessagePriority = "HIGH"
@@ -112,4 +114,9 @@ func (m *Message) SetToken(token string) {
 
 func (m *Message) ShouldIgnore() bool {
 	return m == nil
+}
+
+type Request struct {
+	ValidateOnly bool            `json:"validate_only,omitempty"`
+	Message      json.RawMessage `json:"message"`
 }

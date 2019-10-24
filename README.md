@@ -46,7 +46,7 @@ properties:
 - allow-alerts - enabled alerting messages for converter protobuf push message to a notification message
 - sandbox - if the option is set to true, the message will not be actually sent. Instead FCM performs all the necessary validations, and emulates the send operation
 
-### [FCM HTTP v1](https://firebase.google.com/docs/cloud-messaging/concept-options)
+### [FCM HTTP v1 (GCM)](https://firebase.google.com/docs/cloud-messaging/concept-options)
 
 ```yaml
 fcm:

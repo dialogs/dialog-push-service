@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net"
@@ -118,9 +117,6 @@ func (c *Client) send(ctx context.Context, req *http.Request, message *Request) 
 
 	body := ioutil.NopCloser(bytes.NewReader(message.Payload))
 	req.Body = body
-	req.GetBody = func() (io.ReadCloser, error) {
-		return body, nil
-	}
 
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -140,8 +136,12 @@ func (c *Client) send(ctx context.Context, req *http.Request, message *Request) 
 	case 200, 400, 403, 404, 405, 410, 413, 429, 500, 503:
 		// Table 8-6Values for the APNs JSON reason key
 		// https://developer.apple.com/library/archive/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/CommunicatingwithAPNs.html#//apple_ref/doc/uid/TP40008194-CH11-SW1
-		if err := json.NewDecoder(res.Body).Decode(&resp.Body); err != nil && err != io.EOF {
-			return nil, err
+		if err := provider.DecodeJSONResponse(res.Body, &resp.Body); err != nil && err != io.EOF {
+			out, errEncode := provider.JSONWithoutSecrets(message)
+			if errEncode != nil {
+				out = []byte(errEncode.Error())
+			}
+			return nil, errors.Wrap(err, "invalid asn response: source: "+string(out))
 		}
 	}
 
