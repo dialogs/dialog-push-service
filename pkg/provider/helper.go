@@ -1,9 +1,13 @@
 package provider
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
+	"regexp"
 )
 
 var (
@@ -45,4 +49,53 @@ func SendWithRetry(maxRetries int, send func() (statusCode int, _ error)) error 
 	}
 
 	return nil
+}
+
+// DecodeJSONResponse unmarshal response in json format to the object.
+// If server returns invalid json data, the method represents a response body
+// as an error
+func DecodeJSONResponse(r io.Reader, retval interface{}) error {
+
+	decoder := json.NewDecoder(r)
+
+	err := decoder.Decode(retval)
+	if err == nil {
+		return nil
+	}
+
+	if _, ok := err.(*json.SyntaxError); ok {
+		errInfo := bytes.NewBuffer(nil)
+		_, errCopy := io.CopyN(errInfo, decoder.Buffered(), 2000)
+		if errCopy != nil && errCopy != io.EOF {
+			return err
+		}
+
+		return errors.New(errInfo.String())
+	}
+
+	return err
+}
+
+func JSONWithoutSecrets(obj interface{}) ([]byte, error) {
+
+	out, err := json.Marshal(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return RemoveSecretsFromJSON(out), nil
+}
+
+var (
+	_ReString = regexp.MustCompile(`:(\s*)"([^"\\]|\\.)+"`)
+	_Secret   = []byte(`:"*"`)
+)
+
+func RemoveSecretsFromJSON(in []byte) []byte {
+
+	if len(in) == 0 {
+		return in
+	}
+
+	return _ReString.ReplaceAll(in, _Secret)
 }

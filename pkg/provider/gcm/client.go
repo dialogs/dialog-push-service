@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dialogs/dialog-push-service/pkg/provider"
+	"github.com/pkg/errors"
 )
 
 const ErrorCodeFailedToReadResponse = "FailedToReadResponse"
@@ -57,7 +58,7 @@ func (c *Client) Send(ctx context.Context, message *Request) (retval *Response, 
 		return nil, err
 	}
 
-	if c.sandbox {
+	if c.sandbox && message != nil {
 		message.DryRun = true
 	}
 
@@ -80,36 +81,20 @@ func (c *Client) Send(ctx context.Context, message *Request) (retval *Response, 
 
 func (c *Client) send(ctx context.Context, req *http.Request, message *Request) (*Response, error) {
 
-	sendBodyErr := make(chan error, 1)
-
-	{
-		reqBodyReader, reqBodyWriter := io.Pipe()
-		defer reqBodyReader.Close()
-
-		go func() {
-			defer reqBodyWriter.Close()
-			defer close(sendBodyErr)
-
-			sendBodyErr <- json.NewEncoder(reqBodyWriter).Encode(message)
-		}()
-
+	pipe := provider.NewPipe(func(w io.Writer) error {
 		// message format:
 		// https://firebase.google.com/docs/cloud-messaging/http-server-ref#downstream-http-messages-json
-		req.Body = reqBodyReader
-		req.GetBody = func() (io.ReadCloser, error) {
-			return reqBodyReader, nil
-		}
-	}
+		return json.NewEncoder(w).Encode(message)
+	})
+	defer pipe.Close()
+
+	req.Body = pipe
 
 	res, err := c.client.Do(req)
-	if err == nil {
-		err = <-sendBodyErr
-		defer res.Body.Close()
-	}
-
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
 
 	retval := &Response{
 		StatusCode: res.StatusCode,
@@ -117,8 +102,12 @@ func (c *Client) send(ctx context.Context, req *http.Request, message *Request) 
 
 	// https://firebase.google.com/docs/cloud-messaging/http-server-ref#error-codes
 	if res.StatusCode == 200 || res.StatusCode == 400 {
-		if err := json.NewDecoder(res.Body).Decode(retval); err != nil {
-			return nil, err
+		if err := provider.DecodeJSONResponse(res.Body, retval); err != nil {
+			outInfo, errEncode := provider.JSONWithoutSecrets(message)
+			if errEncode != nil {
+				outInfo = []byte(errEncode.Error())
+			}
+			return nil, errors.Wrap(err, "invalid gcm response: source: "+string(outInfo))
 		}
 	}
 

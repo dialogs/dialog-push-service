@@ -95,18 +95,19 @@ func (c *Client) Send(ctx context.Context, message *Message) (retval *Response, 
 		return nil, err
 	}
 
-	payload, err := message.MarshalJSON()
+	payload, err := json.Marshal(message)
 	if err != nil {
 		return nil, err
 	}
 
 	fnSend := func() (statusCode int, _ error) {
-		retval, err = c.send(ctx, req, payload)
-		if err != nil {
-			return 0, err
+		var e error
+		retval, e = c.send(ctx, req, payload)
+		if e != nil {
+			return 0, e
 		}
 
-		return retval.StatusCode, err
+		return retval.StatusCode, nil
 	}
 
 	err = provider.SendWithRetry(c.retries, fnSend)
@@ -117,47 +118,18 @@ func (c *Client) Send(ctx context.Context, message *Message) (retval *Response, 
 	return retval, nil
 }
 
-var (
-	_RequestBodyPrefixForSandbox = []byte(`{"validate_only":true,"message":`)
-	_RequestBodyPrefix           = []byte(`{"message":`)
-	_RequestBodySuffix           = []byte(`}`)
-)
-
 func (c *Client) send(ctx context.Context, req *http.Request, message json.RawMessage) (*Response, error) {
 
-	sendBodyErr := make(chan error, 1)
-
 	{
-		reqBodyReader, reqBodyWriter := io.Pipe()
-		defer reqBodyReader.Close()
-
-		go func() {
-			defer reqBodyWriter.Close()
-			defer close(sendBodyErr)
-
-			var err error
-
+		pipe := provider.NewPipe(func(w io.Writer) (err error) {
 			// Request format:
 			// https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages/send#request-body
-			if c.sandbox {
-				_, err = reqBodyWriter.Write(_RequestBodyPrefixForSandbox)
-			} else {
-				_, err = reqBodyWriter.Write(_RequestBodyPrefix)
-			}
-
-			if err == nil {
-				_, err = reqBodyWriter.Write(message)
-			}
-
-			if err == nil {
-				_, err = reqBodyWriter.Write(_RequestBodySuffix)
-			}
-
-			if err != nil {
-				sendBodyErr <- err
-				return
-			}
-		}()
+			return json.NewEncoder(w).Encode(&Request{
+				ValidateOnly: c.sandbox,
+				Message:      message,
+			})
+		})
+		defer pipe.Close()
 
 		token, err := c.getToken(ctx)
 		if err != nil {
@@ -168,21 +140,14 @@ func (c *Client) send(ctx context.Context, req *http.Request, message json.RawMe
 		// https://firebase.google.com/docs/cloud-messaging/auth-server
 		req.Header.Set("Authorization", token.Type()+" "+token.AccessToken)
 
-		req.Body = reqBodyReader
-		req.GetBody = func() (io.ReadCloser, error) {
-			return reqBodyReader, nil
-		}
+		req.Body = pipe
 	}
 
 	res, err := c.client.Do(req)
-	if err == nil {
-		err = <-sendBodyErr
-		defer res.Body.Close()
-	}
-
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
 
 	retval := &Response{
 		StatusCode: res.StatusCode,
@@ -191,8 +156,12 @@ func (c *Client) send(ctx context.Context, req *http.Request, message json.RawMe
 	// https://firebase.google.com/docs/reference/fcm/rest/v1/ErrorCode
 	switch retval.StatusCode {
 	case 200, 400, 401, 403, 404, 429:
-		if err := json.NewDecoder(res.Body).Decode(retval); err != nil {
-			return nil, err
+		if err := provider.DecodeJSONResponse(res.Body, retval); err != nil {
+			outInfo, errEncode := provider.JSONWithoutSecrets(message)
+			if errEncode != nil {
+				outInfo = []byte(errEncode.Error())
+			}
+			return nil, errors.Wrap(err, "invalid fcm response: source: "+string(outInfo))
 		}
 	}
 

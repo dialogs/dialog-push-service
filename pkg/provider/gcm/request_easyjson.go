@@ -71,6 +71,10 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderGcm(in *j
 			out.Priority = string(in.String())
 		case "content_available":
 			out.ContentAvailable = bool(in.Bool())
+		case "mutable_content":
+			if data := in.Raw(); in.Ok() {
+				in.AddError((out.MutableContent).UnmarshalJSON(data))
+			}
 		case "time_to_live":
 			out.TimeToLive = int(in.Int())
 		case "restricted_package_name":
@@ -80,10 +84,6 @@ func easyjson3c9d2b01DecodeGithubComDialogsDialogPushServicePkgProviderGcm(in *j
 		case "data":
 			if data := in.Raw(); in.Ok() {
 				in.AddError((out.Data).UnmarshalJSON(data))
-			}
-		case "mutable_content":
-			if data := in.Raw(); in.Ok() {
-				in.AddError((out.MutableContent).UnmarshalJSON(data))
 			}
 		case "notification":
 			if data := in.Raw(); in.Ok() {
@@ -147,6 +147,11 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderGcm(out *
 		out.RawString(prefix)
 		out.Bool(bool(in.ContentAvailable))
 	}
+	if len(in.MutableContent) != 0 {
+		const prefix string = ",\"mutable_content\":"
+		out.RawString(prefix)
+		out.Raw((in.MutableContent).MarshalJSON())
+	}
 	if in.TimeToLive != 0 {
 		const prefix string = ",\"time_to_live\":"
 		out.RawString(prefix)
@@ -166,11 +171,6 @@ func easyjson3c9d2b01EncodeGithubComDialogsDialogPushServicePkgProviderGcm(out *
 		const prefix string = ",\"data\":"
 		out.RawString(prefix)
 		out.Raw((in.Data).MarshalJSON())
-	}
-	if len(in.MutableContent) != 0 {
-		const prefix string = ",\"mutable_content\":"
-		out.RawString(prefix)
-		out.Raw((in.MutableContent).MarshalJSON())
 	}
 	if len(in.Notification) != 0 {
 		const prefix string = ",\"notification\":"

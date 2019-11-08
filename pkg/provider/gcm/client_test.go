@@ -84,6 +84,27 @@ func TestSendError(t *testing.T) {
 		resp)
 }
 
+func TestInvalidRequestData(t *testing.T) {
+
+	client := getClient(t)
+
+	{
+		resp, err := client.Send(context.Background(), nil)
+		require.EqualError(t, err, "invalid gcm response: source: null: JSON_PARSING_ERROR\n")
+		require.Nil(t, resp)
+	}
+
+	{
+		msg := &Request{
+			Data: []byte(`{""}`),
+		}
+
+		resp, err := client.Send(context.Background(), msg)
+		require.EqualError(t, err, "Post https://fcm.googleapis.com/fcm/send: json: error calling MarshalJSON for type *gcm.Request: invalid character '}' after object key")
+		require.Nil(t, resp)
+	}
+}
+
 func getClient(t *testing.T) *Client {
 	t.Helper()
 

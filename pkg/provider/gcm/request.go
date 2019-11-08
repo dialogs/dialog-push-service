@@ -2,6 +2,7 @@ package gcm
 
 import "encoding/json"
 
+// Table 2b:
 // https://firebase.google.com/docs/cloud-messaging/http-server-ref#notification-payload-support
 type Notification struct {
 	Title            string          `json:"title,omitempty"`
@@ -27,11 +28,11 @@ type Request struct {
 	CollapseKey           string          `json:"collapse_key,omitempty"`
 	Priority              string          `json:"priority,omitempty"`
 	ContentAvailable      bool            `json:"content_available,omitempty"`
+	MutableContent        json.RawMessage `json:"mutable_content,omitempty"`
 	TimeToLive            int             `json:"time_to_live,omitempty"`
 	RestrictedPackageName string          `json:"restricted_package_name,omitempty"`
 	DryRun                bool            `json:"dry_run,omitempty"`
 	Data                  json.RawMessage `json:"data,omitempty"`
-	MutableContent        json.RawMessage `json:"mutable_content,omitempty"`
 	Notification          json.RawMessage `json:"notification,omitempty"`
 }
 
