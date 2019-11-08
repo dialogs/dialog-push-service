@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"regexp"
 )
 
 var (
@@ -64,12 +65,9 @@ func DecodeJSONResponse(r io.Reader, retval interface{}) error {
 
 	if _, ok := err.(*json.SyntaxError); ok {
 		errInfo := bytes.NewBuffer(nil)
-		if _, errCopy := io.Copy(errInfo, decoder.Buffered()); errCopy != nil {
+		_, errCopy := io.CopyN(errInfo, decoder.Buffered(), 2000)
+		if errCopy != nil && errCopy != io.EOF {
 			return err
-		}
-
-		if errInfo.Len() > 2000 {
-			errInfo.Truncate(2000)
 		}
 
 		return errors.New(errInfo.String())
@@ -88,7 +86,10 @@ func JSONWithoutSecrets(obj interface{}) ([]byte, error) {
 	return RemoveSecretsFromJSON(out), nil
 }
 
-var _SecretBegin = []byte(`:"`)
+var (
+	_ReString = regexp.MustCompile(`:(\s*)"([^"\\]|\\.)+"`)
+	_Secret   = []byte(`:"*"`)
+)
 
 func RemoveSecretsFromJSON(in []byte) []byte {
 
@@ -96,34 +97,5 @@ func RemoveSecretsFromJSON(in []byte) []byte {
 		return in
 	}
 
-	buf := bytes.NewBuffer(nil)
-	for {
-		pos := bytes.Index(in, _SecretBegin)
-		if pos == -1 {
-			break
-		}
-
-		secretStart := pos + len(_SecretBegin)
-		buf.Write(in[:secretStart])
-		in = in[secretStart:]
-
-		secretEnd := -1
-		for i := 0; i < len(in); i++ {
-			if in[i] == '"' && (i == 0 || (i > 0 && in[i-1] != '\\')) {
-				secretEnd = i
-				break
-			}
-		}
-
-		if secretEnd > -1 {
-			if secretEnd > 0 { // don't add a sectet mask for empty string
-				buf.WriteByte('*')
-			}
-			in = in[secretEnd:]
-		}
-	}
-
-	buf.Write(in)
-
-	return buf.Bytes()
+	return _ReString.ReplaceAll(in, _Secret)
 }
