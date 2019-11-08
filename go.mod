@@ -10,10 +10,10 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.2.1
 	github.com/sideshow/apns2 v0.19.0
-	github.com/spf13/viper v1.4.0
+	github.com/spf13/viper v1.5.0
 	github.com/stretchr/testify v1.4.0
-	go.uber.org/zap v1.11.0
+	go.uber.org/zap v1.12.0
 	golang.org/x/net v0.0.0-20191021144547-ec77196f6094
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	google.golang.org/grpc v1.24.0
+	google.golang.org/grpc v1.25.0
 )
