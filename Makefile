@@ -8,13 +8,18 @@ PROTO_SRC := src/main/protobuf
 
 PROJECT:= $(subst ${GOPATH}/src/,,$(shell pwd))
 
-DOCKER_TARGET_REGISTRY   ?=
-BUILD_NUMBER             ?= 1
-GIT_LAST_COMMIT_ID       ?= $(shell git rev-parse --short HEAD)
-GIT_CURRENT_BRANCH       ?= $(shell git rev-parse --abbrev-ref HEAD)
-DOCKER_TARGET_IMAGE_TAG  ?= $(BUILD_NUMBER)-$(subst /,-,$(GIT_CURRENT_BRANCH))-$(GIT_LAST_COMMIT_ID)
-DOCKER_TARGET_IMAGE_NAME ?= $(shell basename $(shell git rev-parse --show-toplevel))
-DOCKER_TARGET_IMAGE      ?= $(DOCKER_TARGET_REGISTRY)$(DOCKER_TARGET_IMAGE_NAME):$(DOCKER_TARGET_IMAGE_TAG)
+DOCKER_TARGET_REGISTRY        ?=
+BUILD_NUMBER                  ?= 1
+GIT_LAST_COMMIT_ID            ?= $(shell git rev-parse --short HEAD)
+GIT_CURRENT_BRANCH            ?= $(shell git rev-parse --abbrev-ref HEAD)
+DOCKER_TARGET_IMAGE_TAG       ?= $(BUILD_NUMBER)-$(subst /,-,$(GIT_CURRENT_BRANCH))-$(GIT_LAST_COMMIT_ID)
+DOCKER_TARGET_IMAGE_NAME      ?= $(shell basename $(shell git rev-parse --show-toplevel))
+DOCKER_TARGET_IMAGE           ?= $(DOCKER_TARGET_REGISTRY)$(DOCKER_TARGET_IMAGE_NAME):$(DOCKER_TARGET_IMAGE_TAG)
+DOCKER_BUILD_WORKSPACE_SUBDIR ?=
+DOCKER_BUILD_WORKSPACE_DIR    ?= $(shell realpath $(shell git rev-parse --show-toplevel)/$(DOCKER_BUILD_WORKSPACE_SUBDIR))
+MICROSERVICE                  ?= $(DOCKER_TARGET_IMAGE_NAME)
+ARTIFACT_TYPE                 ?= tar
+DOCKER_FILE                   ?= Dockerfile
 
 .PHONY: all
 all: gencode proto-golang proto-py mod lint testall docker-build
@@ -24,10 +29,6 @@ mod:
 	rm -rf vendor
 	GO111MODULE=on go mod tidy
 	GO111MODULE=on go mod download
-
-	$(eval $@_target :=vendor/${SCALA_PB})
-	rm -rf ${$@_target}
-	git clone -b master https://${SCALA_PB} ${$@_target}
 
 .PHONY: lint
 lint:
@@ -56,7 +57,7 @@ gencode:
 	easyjson -all pkg/provider/gcm/response.go'
 
 .PHONY: proto-golang
-proto-golang:
+proto-golang: protoc-scalapb
 	$(eval $@_target :=pkg/api)
 
 	rm -f ${$@_target}/*.pb.go
@@ -91,6 +92,13 @@ proto-py:
 	--grpc_python_out=${$@_target} \
 	${PROTO_SRC}/*.proto
 
+.PHONY: protoc-scalapb
+protoc-scalapb:
+	$(eval $@_target :=vendor/${SCALA_PB})
+	rm -rf ${$@_target}
+	mkdir -m 755 -p ${$@_target}
+	git clone -b master https://${SCALA_PB} ${$@_target}
+
 .PHONY: testall
 testall:
 	rm -rf ${TEST_OUT_DIR}
@@ -111,16 +119,27 @@ $(TEST_TARGETS):
 
 
 .PHONY: docker-build
-docker-build:
-	-docker rm -f `docker ps -a -q --filter=ancestor=${DOCKER_TARGET_IMAGE}`
-	-docker rmi -f `docker images -q ${DOCKER_TARGET_IMAGE}`
-	-docker rmi $(docker images -f "dangling=true" -q)
-
-	docker build -f Dockerfile \
+docker-build: docker-clean
+	docker build -f ${DOCKER_FILE} \
 	--tag ${DOCKER_TARGET_IMAGE} \
 	--build-arg "COMMIT=${GIT_LAST_COMMIT_ID}" \
 	--build-arg "RELEASE=${DOCKER_TARGET_IMAGE_TAG}" \
 	.
+
+.PHONY: docker-image-save
+docker-image-save:
+	docker image save $(DOCKER_TARGET_IMAGE) | gzip > $(MICROSERVICE).$(ARTIFACT_TYPE)
+
+.PHONY: docker-push
+docker-push:
+	docker login -u $(DOCKER_USER) -p $(DOCKER_PASSWORD) $(DOCKER_TARGET_REGISTRY)
+	docker push $(DOCKER_TARGET_IMAGE)
+
+.PHONY: docker-clean
+docker-clean:
+	-docker rm -f $(docker ps -a -q --filter=ancestor=${DOCKER_TARGET_IMAGE})
+	-docker rmi -f $(docker images -q ${DOCKER_TARGET_IMAGE})
+	-docker rmi $(docker images -f "dangling=true" -q)
 
 .PHONY: docker-run
 docker-run:
