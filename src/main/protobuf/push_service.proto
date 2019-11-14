@@ -60,6 +60,7 @@ message VoipPush {
     string disposal_reason = 7;
     OutPeer outPeer = 8;
     bool video = 9;
+    string call_id_str = 10;
 }
 
 message EncryptedPush {
