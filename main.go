@@ -8,6 +8,7 @@ import (
 	"github.com/dialogs/dialog-push-service/service"
 	"github.com/jessevdk/go-flags"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 var opts struct {
@@ -20,10 +21,12 @@ func main() {
 		log.Fatal("failed to parse arguments:", err)
 	}
 
-	logger, err := logger.New()
+	l, err := logger.New()
 	if err != nil {
 		log.Fatal("failed to create logger:", err)
 	}
+
+	l.Info("run service", zap.Any("info", service.Info()))
 
 	v := viper.New()
 	v.SetConfigFile(opts.ConfigLocation)
@@ -31,7 +34,7 @@ func main() {
 		log.Fatal("failed to parse config:", err)
 	}
 
-	svc, err := service.New(v, logger)
+	svc, err := service.New(v, l)
 	if err != nil {
 		log.Fatal("failed to parse config:", err)
 	}

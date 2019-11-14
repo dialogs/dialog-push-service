@@ -76,11 +76,13 @@ func setVoIPPayloadAns(payload *payload.Payload, src *api.VoipPush, supportsVoIP
 	}
 
 	payload.Custom("callId", strconv.Itoa(int(src.GetCallId())))
+	payload.Custom("callIdStr", src.GetCallIdStr())
 	payload.Custom("attemptIndex", src.GetAttemptIndex())
 	payload.Custom("displayName", src.GetDisplayName())
 	payload.Custom("eventBusId", src.GetEventBusId())
 	payload.Custom("updateType", src.GetUpdateType())
 	payload.Custom("disposalReason", src.GetDisposalReason())
+	payload.Custom("video", src.GetVideo())
 
 	if peer := src.GetPeer(); peer != nil {
 		peerInfo := map[string]string{
@@ -101,8 +103,6 @@ func setVoIPPayloadAns(payload *payload.Payload, src *api.VoipPush, supportsVoIP
 		payload.Custom("outPeer", peerInfo)
 	}
 
-	payload.Custom("video", src.GetVideo())
-
 	return nil
 }
 
@@ -111,7 +111,6 @@ func setAlertingPayloadAns(payload *payload.Payload, src *api.AlertingPush, soun
 	if allowAlerts {
 		setAlertPropsAns(payload, src, sound)
 		payload.MutableContent()
-
 
 		if category := src.Category; category != nil {
 			payload.Custom("category", category.Value)
