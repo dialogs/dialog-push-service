@@ -46,7 +46,7 @@ message AlertingPush {
     }
     int32 badge = 6;
     Peer peer = 7;
-    google.protobuf.StringValue mid = 8 [deprecated=true]; //This field moved to encrypted_data. Don't use it.
+    google.protobuf.StringValue mid = 8; // Deprecated! This field moved to encrypted_data. Don't use it.
     google.protobuf.StringValue category = 9;
 }
 
