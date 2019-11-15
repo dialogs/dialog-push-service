@@ -69,6 +69,11 @@ message EncryptedPush {
   int64 nonce = 3;
 }
 
+message ReadPush {
+    Peer peer = 1;
+    int64 last_read_date = 2;
+}
+
 message PushBody {
     string collapse_key = 1;
     int32 time_to_live = 2;
@@ -78,6 +83,7 @@ message PushBody {
         AlertingPush alerting_push = 5;
         VoipPush voip_push = 6;
         EncryptedPush encrypted_push = 7;
+        ReadPush read_push = 8;
     }
 }
 
