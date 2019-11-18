@@ -23,4 +23,6 @@ licenses += ("Apache-2.0", url(
 
 publishMavenStyle := true
 
+resolvers += "Sonatype Nexus Repository Manager" at "https://nexus.transmit.im/repository/dialog"
+
 enablePlugins(Publishing)

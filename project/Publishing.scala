@@ -11,26 +11,32 @@ object Publishing extends AutoPlugin {
   ) ++ settings()
 
   private def settings(): Seq[Def.Setting[_]] = {
-    sys.env.get("PUBLISH_TO").map(_.toLowerCase()).map {
-      case "nexus" =>
-        (sys.env.get("NEXUS_REPOSITORY_NAME"), sys.env.get("NEXUS_REPOSITORY_URL")) match {
-          case (Some(repoName), Some(repoUrl)) =>
-            Seq(
-              Some(publishTo := Some(repoName at repoUrl)),
-              (sys.env.get("NEXUS_USERNAME"), sys.env.get("NEXUS_PASSWORD")) match {
-                case (Some(username), Some(password)) =>
-                  Some(credentials += Credentials(repoName, new URL(repoUrl).getHost, username, password))
-                case _ => 
-                  Some(credentials ++= Seq(Credentials(Path.userHome / ".m2" / ".credentials"),
-                    Credentials(Path.userHome / ".sbt" / ".credentials")))
-              }
-            ).flatten
-          case _ => Seq.empty
-        }
-        
-      case _ => Seq.empty
-      
-    }.getOrElse(Seq.empty)
+    val repoNameOpt = sys.env.get("NEXUS_REPOSITORY_NAME")
+    val repoUrlOpt = sys.env.get("NEXUS_REPOSITORY_URL")
+
+    val publishSettingOpt = for {
+      pubTo <- sys.env.get("PUBLISH_TO") if pubTo.toLowerCase == "nexus"
+      repoName <- repoNameOpt
+      repoUrl <- repoUrlOpt
+    } yield repoName at repoUrl
+
+    val envCredsOpt = for {
+      username <- sys.env.get("NEXUS_USERNAME")
+      password <- sys.env.get("NEXUS_PASSWORD")
+      repoName <- repoNameOpt
+      repoUrl <- repoUrlOpt
+    } yield Seq(Credentials(repoName, new URL(repoUrl).getHost, username, password))
+
+    val creds: Seq[Credentials] = envCredsOpt.getOrElse {
+      Seq(
+        Credentials(Path.userHome / ".m2" / ".credentials"),
+        Credentials(Path.userHome / ".sbt" / ".credentials")
+      )
+    }
+
+    Seq(
+      credentials in ThisBuild ++= creds,
+      publishTo in ThisBuild := publishSettingOpt
+    )
   }
 }
-
