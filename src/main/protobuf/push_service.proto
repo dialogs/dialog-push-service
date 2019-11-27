@@ -61,6 +61,8 @@ message VoipPush {
     OutPeer outPeer = 8;
     bool video = 9;
     string call_id_str = 10;
+    string endpoint = 10;
+    string auth_token = 11;
 }
 
 message EncryptedPush {
