@@ -62,6 +62,7 @@ func setVoIPPayloadFcm(req *fcm.Message, src *api.VoipPush) error {
 
 	req.Data = map[string]string{
 		"callId":         strconv.FormatInt(src.GetCallId(), 10),
+		"callIdStr":      src.GetCallIdStr(),
 		"attemptIndex":   strconv.FormatInt(int64(src.GetAttemptIndex()), 10),
 		"displayName":    src.GetDisplayName(),
 		"eventBusId":     src.GetEventBusId(),
