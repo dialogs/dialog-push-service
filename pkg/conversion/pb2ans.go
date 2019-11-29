@@ -83,6 +83,8 @@ func setVoIPPayloadAns(payload *payload.Payload, src *api.VoipPush, supportsVoIP
 	payload.Custom("updateType", src.GetUpdateType())
 	payload.Custom("disposalReason", src.GetDisposalReason())
 	payload.Custom("video", src.GetVideo())
+	payload.Custom("token", src.GetToken())
+	payload.Custom("endpoint", src.GetEndpoint())
 
 	if peer := src.GetPeer(); peer != nil {
 		peerInfo := map[string]string{
