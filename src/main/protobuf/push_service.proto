@@ -35,6 +35,12 @@ message OutPeer {
   string str_id = 4;
 }
 
+// Call merge rule
+message MergeCallModel {
+  string key = 1;
+  bool merge = 2;
+}
+
 message AlertingPush {
     oneof alert_body {
         Localizeable loc_alert_body = 1;
@@ -63,6 +69,7 @@ message VoipPush {
     string call_id_str = 10;
     string token = 11;
     string endpoint = 12;
+    MergeCallModel merge = 13;
 }
 
 message EncryptedPush {
