@@ -96,6 +96,16 @@ func setVoIPPayloadFcm(req *fcm.Message, src *api.VoipPush) error {
 		}
 	}
 
+	if merge := src.GetMerge(); merge != nil {
+		mergeInfo := map[string]string{
+			"key":   merge.GetKey(),
+			"merge": strconv.FormatBool(merge.GetMerge()),
+		}
+		if err := addMapToMap(req.Data, "merge", mergeInfo); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

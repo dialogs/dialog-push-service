@@ -105,6 +105,14 @@ func setVoIPPayloadAns(payload *payload.Payload, src *api.VoipPush, supportsVoIP
 		payload.Custom("outPeer", peerInfo)
 	}
 
+	if merge := src.GetMerge(); merge != nil {
+		mergeInfo := map[string]string{
+			"key": merge.GetKey(),
+			"merge": strconv.FormatBool(merge.GetMerge()),
+		}
+		payload.Custom("merge", mergeInfo)
+	}
+
 	return nil
 }
 
