@@ -45,6 +45,13 @@ func newImplGRPC(cfg *Config, logger *zap.Logger) (*implGRPC, error) {
 	}, nil
 }
 
+// Remove seq from push if it contains encrypted body [DP-3327]
+func cleanPush(push *api.Push) {
+	if body := push.GetBody(); body != nil && body.GetEncryptedPush() != nil {
+		body.Seq = 0
+	}
+}
+
 func (i *implGRPC) Ping(context.Context, *api.PingRequest) (*api.PongResponse, error) {
 	return &api.PongResponse{}, nil
 }
@@ -99,6 +106,8 @@ func (i *implGRPC) SinglePush(ctx context.Context, push *api.Push) (*api.Respons
 
 	l := i.logger.With(zap.String("method", "single push"))
 
+	cleanPush(push)
+
 	chRes, err := i.sendPush(ctx, push, l)
 	if err != nil {
 		return nil, err
@@ -134,6 +143,8 @@ func (i *implGRPC) sendPush(ctx context.Context, push *api.Push, l *zap.Logger) 
 		l.Error("get peer metric", zap.Error(err))
 		return nil, err
 	}
+
+	cleanPush(push)
 
 	peerMetric.Inc()
 
