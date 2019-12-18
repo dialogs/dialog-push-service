@@ -105,18 +105,14 @@ protoc-scalapb:
 
 .PHONY: test
 test:
-ifneq ($(shell command -v go 2> /dev/null),)
 	rm -rf ${TEST_OUT_DIR}
 	mkdir -p -m 755 $(TEST_OUT_DIR)
 	$(MAKE) -j 1 $(TEST_TARGETS)
 	@echo "=== tests: ok ==="
-endif
 
 .PHONY: build
 build:
-ifneq ($(shell command -v go 2> /dev/null),)
 	go build -race -ldflags="-w -s" -o bin/push-server main.go
-endif
 
 .PHONY: $(TEST_TARGETS)
 $(TEST_TARGETS):
