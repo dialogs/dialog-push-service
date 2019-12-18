@@ -22,7 +22,11 @@ ARTIFACT_TYPE                 ?= tar
 DOCKER_FILE                   ?= Dockerfile
 
 .PHONY: all
-all: gencode proto-golang proto-py mod lint testall docker-build
+all: clean gencode proto-golang proto-py mod lint test docker-build
+
+.PHONY: clean
+clean:
+	rm -rf bin/*
 
 .PHONY: mod
 mod:
@@ -37,7 +41,7 @@ lint:
 	-v "${GOPATH}/pkg:/go/pkg" \
 	-w "/go/src/${PROJECT}" \
 	-e "GOFLAGS=" \
-	go-tools-linter:latest \
+	dialogs/go-tools-linter:1.0.0 \
 	golangci-lint run ./... --exclude "is deprecated"
 
 .PHONY: gencode
@@ -47,7 +51,7 @@ gencode:
 	-v "${GOPATH}/pkg:/go/pkg" \
 	-w "/go/src/${PROJECT}" \
 	-e "GOFLAGS=" \
-	go-tools-easyjson:latest \
+	dialogs/go-tools-easyjson:1.0.0 \
 	sh -c 'rm -fv pkg/provider/*/*_easyjson.go && \
 	easyjson -all pkg/provider/fcm/request.go && \
 	easyjson -all pkg/provider/fcm/response.go && \
@@ -67,7 +71,7 @@ proto-golang: protoc-scalapb
 	-v "${GOPATH}/pkg:/go/pkg" \
 	-w "/go/src/${PROJECT}" \
 	-e "GOFLAGS=" \
-	go-tools-protoc:latest \
+	dialogs/go-tools-protoc:1.0.0 \
 	protoc \
 	-I=${PROTO_SRC} \
 	-I=vendor/${SCALA_PB}/protobuf \
@@ -99,12 +103,16 @@ protoc-scalapb:
 	mkdir -m 755 -p ${$@_target}
 	git clone -b master https://${SCALA_PB} ${$@_target}
 
-.PHONY: testall
-testall:
+.PHONY: test
+test:
 	rm -rf ${TEST_OUT_DIR}
 	mkdir -p -m 755 $(TEST_OUT_DIR)
 	$(MAKE) -j 1 $(TEST_TARGETS)
 	@echo "=== tests: ok ==="
+
+.PHONY: build
+build:
+	go build -race -ldflags="-w -s" -o bin/push-server main.go
 
 .PHONY: $(TEST_TARGETS)
 $(TEST_TARGETS):
