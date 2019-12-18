@@ -13,6 +13,7 @@ target/
 /vendor
 /python
 /testout
+/bin
 
 # android
 /pkg/test/app/android/.gradle/
