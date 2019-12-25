@@ -3,7 +3,7 @@ module github.com/dialogs/dialog-push-service
 go 1.13
 
 require (
-	github.com/dialogs/dialog-go-lib v1.3.0
+	github.com/dialogs/dialog-go-lib v1.4.0
 	github.com/gogo/protobuf v1.3.1
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/mailru/easyjson v0.7.0
